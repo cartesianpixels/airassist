@@ -1,6 +1,6 @@
 "use server";
 
-import { atcAssistantFlow } from "@/ai/assistant";
+import { atcAssistantFlowWrapper } from "@/ai/assistant";
 import { procedureInquiry } from '@/ai/flows/procedure-inquiry';
 import { suggestResource } from '@/ai/flows/resource-suggestion';
 import { KNOWLEDGE_BASE } from '@/lib/mock-data';
@@ -21,7 +21,7 @@ export async function getAiResponse(
   }
 
   try {
-    const answer = await atcAssistantFlow(messages);
+    const answer = await atcAssistantFlowWrapper(messages);
     
     // For now, we are not getting resources, so we return an empty array.
     const resources = undefined;

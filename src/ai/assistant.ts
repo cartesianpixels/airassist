@@ -56,7 +56,7 @@ async function loadAndEmbedKnowledgeBase() {
 
     const {embeddings} = await ai.embed({
       embedder: textEmbedding004,
-      content: records.map(r => ({text: r.content})), // Correctly wrap in {text: ...}
+      content: records.map(r => ({text: r.content})),
     });
 
     documentEmbeddings = records.map((record, index) => ({
@@ -75,59 +75,49 @@ async function loadAndEmbedKnowledgeBase() {
 // Load the knowledge base on server startup.
 loadAndEmbedKnowledgeBase();
 
-export async function atcAssistantFlow(
-  messages: Omit<Message, 'id' | 'resources'>[]
-): Promise<string> {
-  const atcAssistantFlow = ai.defineFlow(
-    {
-      name: 'atcAssistantFlow',
-      inputSchema: z.array(
-        z.object({
-          role: z.enum(['user', 'assistant']),
-          content: z.string(),
-        })
-      ),
-      outputSchema: z.string(),
-    },
-    async messages => {
-      const lastUserMessage = messages[messages.length - 1];
-      const question = lastUserMessage.content;
-      console.log(`Incoming question: ${question}`);
+const atcAssistantFlow = ai.defineFlow(
+  {
+    name: 'atcAssistantFlow',
+    inputSchema: z.array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string(),
+      })
+    ),
+    outputSchema: z.string(),
+  },
+  async messages => {
+    const lastUserMessage = messages[messages.length - 1];
+    const question = lastUserMessage.content;
 
-      // 1. Embed the user's question
-      const {embeddings: questionEmbeddings} = await ai.embed({
-        embedder: textEmbedding004,
-        content: [{text: question}], // Correctly wrap in {text: ...}
-      });
-      const questionEmbedding = questionEmbeddings[0];
+    // 1. Embed the user's question
+    const {embeddings: questionEmbeddings} = await ai.embed({
+      embedder: textEmbedding004,
+      content: [{text: question}],
+    });
+    const questionEmbedding = questionEmbeddings[0];
 
-      // 2. Find the most relevant documents from the knowledge base
-      const scoredDocuments = documentEmbeddings.map(doc => ({
-        ...doc,
-        score: dotProduct(questionEmbedding, doc.embedding),
-      }));
+    // 2. Find the most relevant documents from the knowledge base
+    const scoredDocuments = documentEmbeddings.map(doc => ({
+      ...doc,
+      score: dotProduct(questionEmbedding, doc.embedding),
+    }));
 
-      // Sort by score in descending order
-      scoredDocuments.sort((a, b) => b.score - a.score);
+    // Sort by score in descending order
+    scoredDocuments.sort((a, b) => b.score - a.score);
 
-      // 3. Select the top N documents to use as context
-      const topK = 5;
-      const relevantDocuments = scoredDocuments
-        .slice(0, topK)
-        .map(d => `Source: ${d.source}\nContent: ${d.content}`)
-        .join('\n\n');
-      
-      console.log(`Found ${topK > 0 ? 'top 3' : '0'} relevant documents:`);
-      scoredDocuments.slice(0, 3).forEach(doc => {
-        console.log(`Content: ${doc.content}`);
-      });
+    // 3. Select the top N documents to use as context
+    const topK = 5;
+    const relevantDocuments = scoredDocuments
+      .slice(0, topK)
+      .map(d => `Source: ${d.source}\nContent: ${d.content}`)
+      .join('\n\n');
 
+    const history = messages
+      .map(msg => `${msg.role}: ${msg.content}`)
+      .join('\n');
 
-      const history = messages
-        .map(msg => `${msg.role}: ${msg.content}`)
-        .join('\n');
-
-      const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers MUST be based ONLY on the provided context from FAA Order JO 7110.65, the Aeronautical Information Manual (AIM), and the IVAO US Division Wiki. Do not use any other knowledge.
+    const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers MUST be based ONLY on the provided context from the knowledge base. Do not use any other knowledge.
 
 If the provided context does not contain the answer, you MUST state that you cannot answer the question with the provided information.
 
@@ -142,17 +132,23 @@ ${relevantDocuments}
 ---
 
 Answer the last user question based *only* on the provided context.`;
-      
-      console.log(`Final prompt being sent to model:\n${prompt}`);
 
-      // 4. Generate the final answer from the model using the context
-      const llmResponse = await ai.generate({
-        prompt: prompt,
-        model: 'googleai/gemini-2.0-flash',
-      });
+    // 4. Generate the final answer from the model using the context
+    const llmResponse = await ai.generate({
+      prompt: prompt,
+      model: 'googleai/gemini-2.0-flash',
+    });
 
-      return llmResponse.text;
-    }
-  );
+    return llmResponse.text;
+  }
+);
+
+export async function atcAssistantFlowWrapper(
+  messages: Omit<Message, 'id' | 'resources'>[]
+): Promise<string> {
+  // Ensure knowledge base is loaded before running the flow
+  if (documentEmbeddings.length === 0) {
+    await loadAndEmbedKnowledgeBase();
+  }
   return atcAssistantFlow(messages);
 }
