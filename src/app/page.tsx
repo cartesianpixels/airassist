@@ -34,15 +34,29 @@ function ChatArea() {
   const [activeChatId, setActiveChatId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (isUserInitiated = false) => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector("div[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 20;
+        if (isUserInitiated || isScrolledToBottom) {
+          setTimeout(() => {
+            viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+          }, 100);
+        }
+      }
+    }
   };
 
   React.useEffect(() => {
-    scrollToBottom();
+    // Only scroll to bottom for new messages from the assistant
+    if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
+      scrollToBottom();
+    }
   }, [messages]);
+
 
   const handleSendMessage = async (input: string) => {
     setIsLoading(true);
@@ -55,6 +69,8 @@ function ChatArea() {
     };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    scrollToBottom(true);
+
 
     // If this is the first message of a new chat, create a new session
     if (!activeChatId) {
@@ -151,7 +167,7 @@ function ChatArea() {
           <h2 className="text-lg font-semibold ml-2">Procedure Assistant</h2>
         </header>
         <main className="flex-1 flex flex-col overflow-hidden">
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1" ref={scrollAreaRef}>
             <div className="p-4 md:p-6">
               {messages.length === 0 ? (
                 <ChatWelcome onPromptClick={handleSendMessage} />
@@ -162,7 +178,6 @@ function ChatArea() {
                   ))}
                 </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
           <div className="p-4 md:p-6 border-t bg-background/80 backdrop-blur-sm">

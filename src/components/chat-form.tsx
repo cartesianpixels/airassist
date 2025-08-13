@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SendHorizonal, LoaderCircle } from "lucide-react";
+import { SendHorizonal, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -51,7 +51,7 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
         className="h-10 w-10 shrink-0"
       >
         {isLoading ? (
-          <LoaderCircle className="h-5 w-5 animate-spin" />
+          <Plane className="h-5 w-5 animate-spin" />
         ) : (
           <SendHorizonal className="h-5 w-5" />
         )}
