@@ -30,14 +30,20 @@ const atcAssistantFlow = ai.defineFlow(
 2.  The Aeronautical Information Manual (AIM): https://www.faa.gov/air_traffic/publications/atpubs/aim_html/
 3.  The official IVAO documentation found on wiki.us.ivao.aero.
 
+Your task is to answer the user's questions. Follow this process:
+1.  Analyze the user's question and the conversation history.
+2.  Determine if you have enough specific information to provide a precise answer based SOLELY on the official sources. For example, questions about separation minima require context like aircraft types, radar capabilities, or runway configurations.
+3.  If you do NOT have enough information, ask targeted clarifying questions to get the necessary details from the user. Do not answer until you have the context.
+4.  Once the user provides the necessary context, use it to formulate a comprehensive and precise answer, citing the specific regulations from the documents if possible.
+
 Do not use general knowledge or information from other sources. If the answer cannot be found in these specific documents, state that you do not have the information.
 
-Answer the user's last question based on the provided conversation history.
+Answer the user's last question based on the provided conversation history and the process defined above.
 
 Conversation History:
 ${history}
 
-Answer the last user question based *only* on the specified official sources.`;
+Answer the last user question based *only* on the specified official sources and your instructions.`;
 
     const llmResponse = await ai.generate({
       prompt: prompt,
