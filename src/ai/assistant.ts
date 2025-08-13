@@ -20,7 +20,7 @@ export async function atcAssistantFlow(question: string): Promise<string> {
     async (question) => {
       console.log('Received question:', question);
 
-      const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Answer the user's question.
+      const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Answer the user's question. Keep your answers concise unless the user asks for more detail.
 
 Question:
 ${question}`;
