@@ -24,7 +24,7 @@ const atcAssistantFlow = ai.defineFlow(
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
 
-    const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers must be precise and accurate, especially regarding phraseology.
+    const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers must be precise and accurate, especially regarding phraseology. Always answer from the perspective of an ATC instructor unless the user's question clearly implies they are asking from a different role (e.g., "As a pilot, what should I say?").
 
 Your knowledge is based on the complete and entire text of the following official documents:
 1. FAA Order JO 7110.65 (https://www.faa.gov/air_traffic/publications/atpubs/atc_html/)
