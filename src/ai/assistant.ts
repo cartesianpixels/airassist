@@ -72,9 +72,6 @@ async function loadAndEmbedKnowledgeBase() {
   }
 }
 
-// Load the knowledge base on server startup.
-loadAndEmbedKnowledgeBase();
-
 const atcAssistantFlow = ai.defineFlow(
   {
     name: 'atcAssistantFlow',
@@ -87,6 +84,11 @@ const atcAssistantFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async messages => {
+    // Ensure knowledge base is loaded before running the flow
+    if (documentEmbeddings.length === 0) {
+      await loadAndEmbedKnowledgeBase();
+    }
+    
     const lastUserMessage = messages[messages.length - 1];
     const question = lastUserMessage.content;
 
@@ -146,9 +148,5 @@ Answer the last user question based *only* on the provided context.`;
 export async function atcAssistantFlowWrapper(
   messages: Omit<Message, 'id' | 'resources'>[]
 ): Promise<string> {
-  // Ensure knowledge base is loaded before running the flow
-  if (documentEmbeddings.length === 0) {
-    await loadAndEmbedKnowledgeBase();
-  }
   return atcAssistantFlow(messages);
 }
