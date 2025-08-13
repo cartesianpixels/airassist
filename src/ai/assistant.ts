@@ -44,7 +44,7 @@ async function loadAndEmbedKnowledgeBase() {
 
   console.log('Attempting to load and embed knowledge base...');
   try {
-    const csvPath = path.resolve('./src/data/knowledge.csv');
+    const csvPath = path.join(process.cwd(), 'src', 'data', 'knowledge.csv');
     console.log(`Resolved knowledge base path: ${csvPath}`);
 
     if (!fs.existsSync(csvPath)) {
