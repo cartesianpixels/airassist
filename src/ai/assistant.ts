@@ -55,7 +55,7 @@ async function loadAndEmbedKnowledgeBase() {
 
   const {embeddings} = await ai.embed({
     embedder: textEmbedding004,
-    content: records.map(r => r.content),
+    content: records.map(r => ({text: r.content})),
   });
 
   documentEmbeddings = records.map((record, index) => ({
@@ -91,7 +91,7 @@ export async function atcAssistantFlow(
       // 1. Embed the user's question
       const {embeddings: questionEmbeddings} = await ai.embed({
         embedder: textEmbedding004,
-        content: [question],
+        content: [{text: question}],
       });
       const questionEmbedding = questionEmbeddings[0];
 
