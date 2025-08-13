@@ -42,20 +42,30 @@ async function loadAndEmbedKnowledgeBase() {
     return;
   }
 
-  console.log('Loading and embedding knowledge base...');
+  console.log('Attempting to load and embed knowledge base...');
   try {
     const csvPath = path.resolve('./src/data/knowledge.csv');
+    console.log(`Resolved knowledge base path: ${csvPath}`);
+
+    if (!fs.existsSync(csvPath)) {
+      throw new Error(`Knowledge base file not found at: ${csvPath}`);
+    }
+
     const fileContent = fs.readFileSync(csvPath, {encoding: 'utf-8'});
+    console.log('Successfully read knowledge base file.');
 
     const records: {source: string; content: string}[] = parse(fileContent, {
       columns: true,
       skip_empty_lines: true,
     });
+    console.log(`Parsed ${records.length} records from CSV.`);
 
+    console.log('Starting to embed documents...');
     const {embeddings} = await ai.embed({
       embedder: textEmbedding004,
       content: records.map(r => ({text: r.content})),
     });
+    console.log('Successfully embedded documents.');
 
     documentEmbeddings = records.map((record, index) => ({
       ...record,
@@ -64,9 +74,9 @@ async function loadAndEmbedKnowledgeBase() {
 
     console.log(`Knowledge base loaded and embedded with ${documentEmbeddings.length} documents.`);
   } catch (error) {
-    console.error('Failed to load or embed knowledge base:', error);
-    // Exit gracefully if the knowledge base can't be loaded, as the app can't function.
-    process.exit(1);
+    console.error('FATAL: Failed to load or embed knowledge base:', error);
+    // Throw an error instead of exiting the process, so it can be caught by the caller.
+    throw new Error('Failed to initialize knowledge base. The assistant is unavailable.');
   }
 }
 
