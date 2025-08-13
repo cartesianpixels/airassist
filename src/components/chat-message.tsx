@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bot, User, ThumbsUp, ThumbsDown, Link as LinkIcon } from "lucide-react";
+import { Bot, User, ThumbsUp, ThumbsDown, Link as LinkIcon, Clipboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
       variant: type === 'positive' ? 'default' : 'destructive',
     });
   };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    toast({
+      title: "Copied to Clipboard",
+      description: "The assistant's response has been copied.",
+    });
+  };
+
 
   return (
     <div className={`flex items-start gap-4 ${isAssistant ? "" : "justify-end"}`}>
@@ -74,6 +83,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {isAssistant && (
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy}>
+              <Clipboard className="w-4 h-4 text-muted-foreground" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFeedback("positive")}>
               <ThumbsUp className="w-4 h-4 text-green-500" />
             </Button>

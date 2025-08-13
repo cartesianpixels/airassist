@@ -20,11 +20,18 @@ import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
 import type { Message } from "@/lib/types";
 import { getAiResponse } from "./actions";
-import { CHAT_HISTORY } from "@/lib/mock-data";
-import { Book, History } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { PlusCircle, History } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+}
 
 function ChatArea() {
+  const [chatHistory, setChatHistory] = React.useState<ChatSession[]>([]);
+  const [activeChatId, setActiveChatId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -39,13 +46,34 @@ function ChatArea() {
 
   const handleSendMessage = async (input: string) => {
     setIsLoading(true);
-    const newMessage: Message = {
+    let currentChatId = activeChatId;
+
+    const userMessage: Message = {
       id: String(Date.now()),
       role: "user",
       content: input,
     };
-    const newMessages = [...messages, newMessage];
+    const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+
+    // If this is the first message of a new chat, create a new session
+    if (!activeChatId) {
+      const newChat: ChatSession = {
+        id: String(Date.now()),
+        title: input.substring(0, 30) + (input.length > 30 ? "..." : ""),
+        messages: newMessages,
+      };
+      currentChatId = newChat.id;
+      setActiveChatId(newChat.id);
+      setChatHistory(prev => [newChat, ...prev]);
+    } else {
+      // Otherwise, update the existing session
+      setChatHistory(prev =>
+        prev.map(chat =>
+          chat.id === activeChatId ? { ...chat, messages: newMessages } : chat
+        )
+      );
+    }
 
     const { answer, resources } = await getAiResponse(
       newMessages.map(({ id, ...rest }) => rest)
@@ -57,78 +85,101 @@ function ChatArea() {
       content: answer,
       resources,
     };
-    setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    
+    const finalMessages = [...newMessages, assistantMessage];
+    setMessages(finalMessages);
+    setChatHistory(prev =>
+      prev.map(chat =>
+        chat.id === currentChatId ? { ...chat, messages: finalMessages } : chat
+      )
+    );
     setIsLoading(false);
   };
+
+  const handleNewChat = () => {
+    setActiveChatId(null);
+    setMessages([]);
+  };
+
+  const loadChat = (chatId: string) => {
+    const chat = chatHistory.find(c => c.id === chatId);
+    if (chat) {
+      setActiveChatId(chat.id);
+      setMessages(chat.messages);
+    }
+  };
+
   return (
     <SidebarProvider>
-    <Sidebar
-      variant="sidebar"
-      collapsible="icon"
-      className="border-r border-border/60"
-    >
-      <SidebarHeader>
-        <AirAssistLogo />
-      </SidebarHeader>
-      <SidebarContent className="p-2 flex flex-col gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground px-2 py-1">History</h2>
-          <SidebarMenu>
-            {CHAT_HISTORY.map((item) => (
-              <SidebarMenuItem key={item.id}>
-                <SidebarMenuButton
-                  className="text-muted-foreground hover:text-foreground"
-                  size="sm"
-                  tooltip={{ children: item.title, side:"right" }}
-                >
-                  <History />
-                  <span>{item.title}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </div>
-      </SidebarContent>
-      <SidebarFooter>
-        {/* Footer content can go here */}
-      </SidebarFooter>
-    </Sidebar>
-    <SidebarInset className="flex flex-col bg-background">
-      <header className="p-2 border-b flex items-center h-14">
-        <SidebarTrigger className="md:hidden" />
-        <h2 className="text-lg font-semibold ml-2">Procedure Assistant</h2>
-      </header>
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1">
-          <div className="p-4 md:p-6">
-            {messages.length === 0 ? (
-              <ChatWelcome onPromptClick={handleSendMessage} />
-            ) : (
-              <div className="space-y-6">
-                {messages.map((message) => (
-                  <ChatMessage key={message.id} message={message} />
-                ))}
-              </div>
-            )}
-             <div ref={messagesEndRef} />
+      <Sidebar
+        variant="sidebar"
+        collapsible="icon"
+        className="border-r border-border/60"
+      >
+        <SidebarHeader>
+          <AirAssistLogo />
+        </SidebarHeader>
+        <SidebarContent className="p-2 flex flex-col gap-4">
+          <div>
+            <Button variant="ghost" className="w-full justify-start gap-2 mb-2" onClick={handleNewChat}>
+              <PlusCircle />
+              <span>New Chat</span>
+            </Button>
+            <h2 className="text-sm font-semibold text-muted-foreground px-2 py-1">History</h2>
+            <SidebarMenu>
+              {chatHistory.map((item) => (
+                <SidebarMenuItem key={item.id} onClick={() => loadChat(item.id)}>
+                  <SidebarMenuButton
+                    className="text-muted-foreground hover:text-foreground"
+                    size="sm"
+                    tooltip={{ children: item.title, side: "right" }}
+                    isActive={item.id === activeChatId}
+                  >
+                    <History />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </div>
-        </ScrollArea>
-        <div className="p-4 md:p-6 border-t bg-background/80 backdrop-blur-sm">
-          <ChatForm onSubmit={handleSendMessage} isLoading={isLoading} />
-        </div>
-      </main>
-    </SidebarInset>
-  </SidebarProvider>
-  )
+        </SidebarContent>
+        <SidebarFooter>{/* Footer content can go here */}</SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="flex flex-col bg-background">
+        <header className="p-2 border-b flex items-center h-14">
+          <SidebarTrigger className="md:hidden" />
+          <h2 className="text-lg font-semibold ml-2">Procedure Assistant</h2>
+        </header>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <ScrollArea className="flex-1">
+            <div className="p-4 md:p-6">
+              {messages.length === 0 ? (
+                <ChatWelcome onPromptClick={handleSendMessage} />
+              ) : (
+                <div className="space-y-6">
+                  {messages.map((message) => (
+                    <ChatMessage key={message.id} message={message} />
+                  ))}
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+          <div className="p-4 md:p-6 border-t bg-background/80 backdrop-blur-sm">
+            <ChatForm onSubmit={handleSendMessage} isLoading={isLoading} />
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
 
-
 export default function Home() {
-  const [isClient, setIsClient] = React.useState(false)
- 
+  const [isClient, setIsClient] = React.useState(false);
+
   React.useEffect(() => {
-    setIsClient(true)
-  }, [])
- 
+    setIsClient(true);
+  }, []);
+
   return isClient ? <ChatArea /> : null;
 }
