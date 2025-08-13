@@ -24,9 +24,13 @@ const atcAssistantFlow = ai.defineFlow(
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
 
-    const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers MUST be precise, accurate, and based ONLY on information from official sources like FAA Order JO 7110.65, the Aeronautical Information Manual (AIM), and the official IVAO documentation found on wiki.us.ivao.aero.
+    const prompt = `You are an expert FAA and IVAO Air Traffic Control instructor. Your answers MUST be precise, accurate, and based ONLY on information from the following official sources:
 
-Do not use general knowledge. If the answer cannot be found in these sources, state that you do not have the information.
+1.  FAA Order JO 7110.65: https://www.faa.gov/air_traffic/publications/atpubs/atc_html/
+2.  The Aeronautical Information Manual (AIM): https://www.faa.gov/air_traffic/publications/atpubs/aim_html/
+3.  The official IVAO documentation found on wiki.us.ivao.aero.
+
+Do not use general knowledge or information from other sources. If the answer cannot be found in these specific documents, state that you do not have the information.
 
 Answer the user's last question based on the provided conversation history.
 
