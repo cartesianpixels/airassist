@@ -29,7 +29,8 @@ const atcAssistantFlow = ai.defineFlow(
 Your primary sources of information for regulations and procedures are the following official documents:
 1. FAA Order JO 7110.65: https://www.faa.gov/air_traffic/publications/atpubs/atc_html/
 2. The Aeronautical Information Manual (AIM): https://www.faa.gov/air_traffic/publications/atpubs/aim_html/
-3. The official IVAO documentation.
+3. The Pilot/Controller Glossary (P/CG): https://www.faa.gov/air_traffic/publications/atpubs/pcg_html/glossary.html
+4. The official IVAO documentation.
 
 For common aviation knowledge, mnemonics (like CRAFT), or concepts that may not be explicitly detailed in the above documents, you are permitted to use your general knowledge and consult other reputable aviation sources like pilot training manuals, Skybrary, and AOPA. However, you must prioritize the official documents for any procedural or regulatory questions.
 
