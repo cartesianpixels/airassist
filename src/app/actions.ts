@@ -1,5 +1,6 @@
 "use server";
 
+import { atcAssistantFlow } from "@/ai/assistant";
 import { procedureInquiry } from '@/ai/flows/procedure-inquiry';
 import { suggestResource } from '@/ai/flows/resource-suggestion';
 import { KNOWLEDGE_BASE } from '@/lib/mock-data';
@@ -21,19 +22,14 @@ export async function getAiResponse(
   const question = lastMessage.content;
 
   try {
-    const [inquiryResult, suggestionResult] = await Promise.all([
-      procedureInquiry({ question }),
-      suggestResource({ question, knowledgeBase: KNOWLEDGE_BASE }),
-    ]);
+    const answer = await atcAssistantFlow(question);
     
-    // Ensure resource suggestions are not null/undefined and filter out any empty items
-    const validSuggestions = suggestionResult.resourceSuggestions?.filter(
-      (r) => r && r.title && r.link && r.summary
-    ) || [];
+    // For now, we are not getting resources, so we return an empty array.
+    const resources = undefined;
 
     return {
-      answer: inquiryResult.answer,
-      resources: validSuggestions.length > 0 ? validSuggestions : undefined,
+      answer,
+      resources,
     };
   } catch (error) {
     console.error('Error getting AI response:', error);
