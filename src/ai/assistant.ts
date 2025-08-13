@@ -42,7 +42,7 @@ export async function atcAssistantFlow(question: string): Promise<string> {
       // 2. Create vector embeddings for the content of each document.
       const documentEmbeddings = await ai.embed({
         embedder: textEmbedding004,
-        content: records.map(r => r.content),
+        content: records.map(r => ({ content: r.content })),
       });
 
       // 3. Create a vector embedding for the user's question.
