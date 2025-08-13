@@ -27,6 +27,8 @@ export async function atcAssistantFlow(question: string): Promise<string> {
       outputSchema: z.string(),
     },
     async (question) => {
+      console.log('Received question:', question);
+
       // 1. Read and parse the knowledge base CSV file.
       const csvFilePath = path.resolve(process.cwd(), 'src/data/knowledge.csv');
       const fileContent = fs.readFileSync(csvFilePath, {encoding: 'utf-8'});
@@ -35,6 +37,7 @@ export async function atcAssistantFlow(question: string): Promise<string> {
         columns: true, // Use the first row as headers ('source', 'content')
         skip_empty_lines: true,
       });
+      console.log(`Parsed ${records.length} records from CSV.`);
 
       // 2. Create vector embeddings for the content of each document.
       const documentEmbeddings = await ai.embed({
@@ -58,6 +61,15 @@ export async function atcAssistantFlow(question: string): Promise<string> {
       similarities.sort((a, b) => b.similarity - a.similarity);
       const topResults = similarities.slice(0, 5).map(item => records[item.index]);
 
+      if (topResults.length > 0) {
+        console.log('Top 3 documents found:');
+        topResults.slice(0, 3).forEach((doc, i) => {
+          console.log(`  ${i + 1}: ${doc.content}`);
+        });
+      } else {
+        console.log('No relevant documents found.');
+      }
+
       // 5. Use the top matching documents as context for the final prompt.
       const context = topResults.map(r => `Source: ${r.source}\nContent: ${r.content}`).join('\n\n');
 
@@ -68,6 +80,8 @@ ${context}
 
 Question:
 ${question}`;
+
+      console.log('Constructed prompt:', prompt);
 
       // 6. Generate the final answer from the model.
       const llmResponse = await ai.generate({
