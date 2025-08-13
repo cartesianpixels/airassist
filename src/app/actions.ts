@@ -1,9 +1,6 @@
 "use server";
 
 import { atcAssistantFlowWrapper } from "@/ai/assistant";
-import { procedureInquiry } from '@/ai/flows/procedure-inquiry';
-import { suggestResource } from '@/ai/flows/resource-suggestion';
-import { KNOWLEDGE_BASE } from '@/lib/mock-data';
 import type { Message } from '@/lib/types';
 
 // A simple in-memory store for feedback. In a real app, use a database.
@@ -23,7 +20,7 @@ export async function getAiResponse(
   try {
     const answer = await atcAssistantFlowWrapper(messages);
     
-    // For now, we are not getting resources, so we return an empty array.
+    // Resource suggestions are disabled in this simplified approach
     const resources = undefined;
 
     return {

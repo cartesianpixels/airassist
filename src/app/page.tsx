@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AirAssistLogo } from "@/components/icons";
-import { KnowledgeBase } from "@/components/knowledge-base";
 import { ChatWelcome } from "@/components/chat-welcome";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
@@ -72,7 +71,6 @@ function ChatArea() {
         <AirAssistLogo />
       </SidebarHeader>
       <SidebarContent className="p-2 flex flex-col gap-4">
-        <KnowledgeBase />
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground px-2 py-1">History</h2>
           <SidebarMenu>
