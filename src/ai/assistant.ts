@@ -52,8 +52,6 @@ async function loadAndEmbedKnowledgeBase() {
       skip_empty_lines: true,
     });
 
-    console.log(`Parsed ${records.length} records from CSV.`);
-
     const {embeddings} = await ai.embed({
       embedder: textEmbedding004,
       content: records.map(r => ({text: r.content})),
@@ -85,9 +83,7 @@ const atcAssistantFlow = ai.defineFlow(
   },
   async messages => {
     // Ensure knowledge base is loaded before running the flow
-    if (documentEmbeddings.length === 0) {
-      await loadAndEmbedKnowledgeBase();
-    }
+    await loadAndEmbedKnowledgeBase();
     
     const lastUserMessage = messages[messages.length - 1];
     const question = lastUserMessage.content;
