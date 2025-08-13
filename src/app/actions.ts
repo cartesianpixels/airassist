@@ -33,8 +33,9 @@ export async function getAiResponse(
     };
   } catch (error) {
     console.error('Error getting AI response:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
-      answer: 'Sorry, I encountered an error while processing your request. Please try again.',
+      answer: `Sorry, I encountered an error while processing your request. Please try again. Error: ${errorMessage}`,
       resources: [],
     };
   }
