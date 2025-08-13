@@ -104,7 +104,7 @@ function ChatArea() {
         <ScrollArea className="flex-1">
           <div className="p-4 md:p-6">
             {messages.length === 0 ? (
-              <ChatWelcome />
+              <ChatWelcome onPromptClick={handleSendMessage} />
             ) : (
               <div className="space-y-6">
                 {messages.map((message) => (
