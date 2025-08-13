@@ -49,6 +49,7 @@ export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
   const [shuffledPrompts, setShuffledPrompts] = React.useState<string[]>([]);
 
   React.useEffect(() => {
+    // Shuffle prompts on the client side to avoid hydration errors
     setShuffledPrompts(shuffleArray([...examplePrompts]));
   }, []);
 

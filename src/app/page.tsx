@@ -190,11 +190,5 @@ function ChatArea() {
 }
 
 export default function Home() {
-  const [isClient, setIsClient] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  return isClient ? <ChatArea /> : null;
+  return <ChatArea />;
 }
