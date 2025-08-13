@@ -1,12 +1,14 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User, ThumbsUp, ThumbsDown, Link as LinkIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { submitFeedback } from "@/app/actions";
 import type { Message } from "@/lib/types";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessageProps {
   message: Message;
@@ -36,7 +38,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
       )}
       <div className={`flex flex-col gap-2 max-w-[85%] ${isAssistant ? "" : "items-end"}`}>
         <div className={`rounded-lg p-4 ${isAssistant ? "bg-card" : "bg-primary text-primary-foreground"}`}>
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {isAssistant ? (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          )}
         </div>
 
         {isAssistant && message.resources && message.resources.length > 0 && (
