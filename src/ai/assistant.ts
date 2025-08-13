@@ -43,27 +43,33 @@ async function loadAndEmbedKnowledgeBase() {
   }
 
   console.log('Loading and embedding knowledge base...');
-  const csvPath = path.resolve('./src/data/knowledge.csv');
-  const fileContent = fs.readFileSync(csvPath, {encoding: 'utf-8'});
+  try {
+    const csvPath = path.resolve('./src/data/knowledge.csv');
+    const fileContent = fs.readFileSync(csvPath, {encoding: 'utf-8'});
 
-  const records: {source: string; content: string}[] = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true,
-  });
+    const records: {source: string; content: string}[] = parse(fileContent, {
+      columns: true,
+      skip_empty_lines: true,
+    });
 
-  console.log(`Parsed ${records.length} records from CSV.`);
+    console.log(`Parsed ${records.length} records from CSV.`);
 
-  const {embeddings} = await ai.embed({
-    embedder: textEmbedding004,
-    content: records.map(r => ({text: r.content})),
-  });
+    const {embeddings} = await ai.embed({
+      embedder: textEmbedding004,
+      content: records.map(r => ({text: r.content})), // Correctly wrap in {text: ...}
+    });
 
-  documentEmbeddings = records.map((record, index) => ({
-    ...record,
-    embedding: embeddings[index],
-  }));
+    documentEmbeddings = records.map((record, index) => ({
+      ...record,
+      embedding: embeddings[index],
+    }));
 
-  console.log(`Knowledge base loaded and embedded with ${documentEmbeddings.length} documents.`);
+    console.log(`Knowledge base loaded and embedded with ${documentEmbeddings.length} documents.`);
+  } catch (error) {
+    console.error('Failed to load or embed knowledge base:', error);
+    // Exit gracefully if the knowledge base can't be loaded, as the app can't function.
+    process.exit(1);
+  }
 }
 
 // Load the knowledge base on server startup.
@@ -86,12 +92,12 @@ export async function atcAssistantFlow(
     async messages => {
       const lastUserMessage = messages[messages.length - 1];
       const question = lastUserMessage.content;
-      console.log(`Received question: ${question}`);
+      console.log(`Incoming question: ${question}`);
 
       // 1. Embed the user's question
       const {embeddings: questionEmbeddings} = await ai.embed({
         embedder: textEmbedding004,
-        content: [{text: question}],
+        content: [{text: question}], // Correctly wrap in {text: ...}
       });
       const questionEmbedding = questionEmbeddings[0];
 
@@ -111,7 +117,7 @@ export async function atcAssistantFlow(
         .map(d => `Source: ${d.source}\nContent: ${d.content}`)
         .join('\n\n');
       
-      console.log(`Found ${topK} relevant documents:`);
+      console.log(`Found ${topK > 0 ? 'top 3' : '0'} relevant documents:`);
       scoredDocuments.slice(0, 3).forEach(doc => {
         console.log(`Content: ${doc.content}`);
       });
