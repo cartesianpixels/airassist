@@ -19,10 +19,9 @@ export async function getAiResponse(
   if (lastMessage?.role !== 'user') {
     throw new Error('Last message must be from the user.');
   }
-  const question = lastMessage.content;
 
   try {
-    const answer = await atcAssistantFlow(question);
+    const answer = await atcAssistantFlow(messages);
     
     // For now, we are not getting resources, so we return an empty array.
     const resources = undefined;
