@@ -46,12 +46,9 @@ interface ChatWelcomeProps {
 
 export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [displayPrompts, setDisplayPrompts] = React.useState<string[]>([]);
-  const [hasMounted, setHasMounted] = React.useState(false);
-
+  const [displayPrompts, setDisplayPrompts] = React.useState<string[]>(examplePrompts);
+  
   React.useEffect(() => {
-    setHasMounted(true);
-    // Shuffle prompts on the client side to avoid hydration errors
     setDisplayPrompts(shuffleArray([...examplePrompts]));
   }, []);
 
@@ -84,7 +81,7 @@ export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {hasMounted && filteredPrompts.map((prompt, index) => (
+            {filteredPrompts.map((prompt, index) => (
               <Card 
                 key={index} 
                 className="text-left bg-card/50 hover:bg-card/80 transition-colors cursor-pointer"

@@ -29,7 +29,7 @@ interface ChatSession {
   messages: Message[];
 }
 
-function ChatArea() {
+const ChatArea = React.forwardRef<HTMLDivElement, {}>((props, ref) => {
   const [chatHistory, setChatHistory] = React.useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
@@ -187,7 +187,9 @@ function ChatArea() {
       </SidebarInset>
     </SidebarProvider>
   );
-}
+});
+
+ChatArea.displayName = 'ChatArea';
 
 export default function Home() {
   return <ChatArea />;
