@@ -46,14 +46,14 @@ interface ChatWelcomeProps {
 
 export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [shuffledPrompts, setShuffledPrompts] = React.useState<string[]>([]);
+  const [displayPrompts, setDisplayPrompts] = React.useState<string[]>(examplePrompts);
 
   React.useEffect(() => {
     // Shuffle prompts on the client side to avoid hydration errors
-    setShuffledPrompts(shuffleArray([...examplePrompts]));
+    setDisplayPrompts(shuffleArray([...examplePrompts]));
   }, []);
 
-  const filteredPrompts = shuffledPrompts.filter((prompt) =>
+  const filteredPrompts = displayPrompts.filter((prompt) =>
     prompt.toLowerCase().includes(searchTerm.toLowerCase())
   ).slice(0, 4);
 
