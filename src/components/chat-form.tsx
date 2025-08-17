@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { SendHorizonal, Plane } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -38,7 +38,7 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Ask a question about procedures..."
-        className="flex-1 resize-none"
+        className="flex-1 resize-none bg-secondary/50"
         rows={1}
         disabled={isLoading}
         aria-label="Chat input"
@@ -51,7 +51,24 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
         className="h-10 w-10 shrink-0"
       >
         {isLoading ? (
-          <Plane className="h-5 w-5 animate-spin" />
+          <svg
+            className="h-5 w-5 animate-radar-sweep"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            stroke="currentColor"
+          >
+            <defs>
+              <radialGradient id="radar-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                <stop offset="0%" style={{ stopColor: 'currentColor', stopOpacity: 0.5 }} />
+                <stop offset="100%" style={{ stopColor: 'currentColor', stopOpacity: 0 }} />
+              </radialGradient>
+            </defs>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1" strokeOpacity="0.3" />
+            <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="1" strokeOpacity="0.3" />
+            <circle cx="12" cy="12" r="2" stroke="currentColor" strokeWidth="1" strokeOpacity="0.3" />
+            <path d="M12 2 A 10 10 0 0 1 22 12" fill="url(#radar-gradient)" strokeLinecap="round" />
+          </svg>
         ) : (
           <SendHorizonal className="h-5 w-5" />
         )}
