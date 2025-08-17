@@ -63,7 +63,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <h3 className="text-sm font-semibold mb-2">Suggested Resources</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {message.resources.map((resource, index) => (
-                <Card key={index} className="bg-background/80">
+                <Card key={index} className="bg-background/80 hover:bg-muted transition-colors">
                   <CardHeader className="p-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <LinkIcon className="w-4 h-4 text-primary" />

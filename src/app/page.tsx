@@ -51,10 +51,8 @@ export default function Home() {
   };
 
   React.useEffect(() => {
-    // Only scroll to bottom for new messages from the assistant or user
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      // Heuristic to only scroll down if user sent the message or it's a new response.
       if (lastMessage.role === 'user' || (lastMessage.role === 'assistant' && !document.hidden)) {
           const viewport = scrollAreaRef.current?.querySelector("div[data-radix-scroll-area-viewport]");
           if (viewport) {
@@ -80,7 +78,6 @@ export default function Home() {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     
-    // Manually trigger scroll for user messages
     const viewport = scrollAreaRef.current?.querySelector("div[data-radix-scroll-area-viewport]");
     if (viewport) {
         setTimeout(() => {
@@ -89,7 +86,6 @@ export default function Home() {
     }
 
 
-    // If this is the first message of a new chat, create a new session
     if (!activeChatId) {
       const newChat: ChatSession = {
         id: String(Date.now()),
@@ -100,7 +96,6 @@ export default function Home() {
       setActiveChatId(newChat.id);
       setChatHistory(prev => [newChat, ...prev]);
     } else {
-      // Otherwise, update the existing session
       setChatHistory(prev =>
         prev.map(chat =>
           chat.id === activeChatId ? { ...chat, messages: newMessages } : chat
@@ -147,23 +142,23 @@ export default function Home() {
       <Sidebar
         variant="sidebar"
         collapsible="icon"
-        className="border-r border-border/60"
+        className="border-r border-sidebar-border/60 bg-sidebar text-sidebar-foreground"
       >
         <SidebarHeader>
           <AirAssistLogo />
         </SidebarHeader>
         <SidebarContent className="p-2 flex flex-col gap-4">
           <div>
-            <Button variant="ghost" className="w-full justify-start gap-2 mb-2" onClick={handleNewChat}>
+            <Button variant="ghost" className="w-full justify-start gap-2 mb-2 text-sidebar-primary-foreground bg-sidebar-primary hover:bg-sidebar-primary/90" onClick={handleNewChat}>
               <PlusCircle />
               <span>New Chat</span>
             </Button>
-            <h2 className="text-sm font-semibold text-muted-foreground px-2 py-1">History</h2>
+            <h2 className="text-sm font-semibold text-sidebar-foreground/70 px-2 py-1">History</h2>
             <SidebarMenu>
               {chatHistory.map((item) => (
                 <SidebarMenuItem key={item.id} onClick={() => loadChat(item.id)}>
                   <SidebarMenuButton
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     size="sm"
                     tooltip={{ children: item.title, side: "right" }}
                     isActive={item.id === activeChatId}
