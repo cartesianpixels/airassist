@@ -12,7 +12,26 @@ import {z} from 'genkit';
 
 const SuggestResourceInputSchema = z.object({
   question: z.string().describe('The question asked by the air traffic controller.'),
-  knowledgeBase: z.string().describe('The local knowledge base containing FAA and IVAO procedures.'),
+  knowledgeBase: z.array(
+    z.object({
+      id: z.string(),
+      content: z.string(),
+      metadata: z.object({
+        title: z.string(),
+        type: z.string(),
+        procedure_type: z.string(),
+        chapter: z.string(),
+        section: z.string(),
+        paragraph: z.string(),
+        source: z.string(),
+        chunk_index: z.number(),
+        total_chunks: z.number(),
+      }),
+      displayName: z.string(),
+      tags: z.array(z.string()),
+      summary: z.string(),
+    })
+  ).describe('The local knowledge base containing FAA and IVAO procedures in JSON format.'),
 });
 export type SuggestResourceInput = z.infer<typeof SuggestResourceInputSchema>;
 
@@ -40,7 +59,7 @@ const prompt = ai.definePrompt({
 Question: {{{question}}}
 
 Knowledge Base:
-{{{knowledgeBase}}}
+{{{json knowledgeBase}}}
 
 Based on the question and the knowledge base, suggest relevant resources. Provide the title, link, and a brief summary for each suggested resource.
 
