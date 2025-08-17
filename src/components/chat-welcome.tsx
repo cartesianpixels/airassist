@@ -47,10 +47,8 @@ interface ChatWelcomeProps {
 export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [displayPrompts, setDisplayPrompts] = React.useState<string[]>([]);
-  const [hasMounted, setHasMounted] = React.useState(false);
   
   React.useEffect(() => {
-    setHasMounted(true);
     setDisplayPrompts(shuffleArray([...examplePrompts]));
   }, []);
 
@@ -82,7 +80,7 @@ export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {hasMounted && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredPrompts.map((prompt, index) => (
               <Card 
                 key={index} 
@@ -94,7 +92,7 @@ export function ChatWelcome({ onPromptClick }: ChatWelcomeProps) {
                 </CardContent>
               </Card>
             ))}
-          </div>}
+          </div>
         </div>
       </div>
     </div>

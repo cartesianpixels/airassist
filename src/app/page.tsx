@@ -15,13 +15,16 @@ import {
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AirAssistLogo } from "@/components/icons";
-import { ChatWelcome } from "@/components/chat-welcome";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
 import type { Message } from "@/lib/types";
 import { getAiResponse } from "./actions";
 import { PlusCircle, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import dynamic from 'next/dynamic';
+
+const ChatWelcome = dynamic(() => import('@/components/chat-welcome').then(mod => mod.ChatWelcome), { ssr: false });
+
 
 interface ChatSession {
   id: string;
@@ -29,31 +32,38 @@ interface ChatSession {
   messages: Message[];
 }
 
-const ChatArea = React.forwardRef<HTMLDivElement, {}>((props, ref) => {
+export default function Home() {
   const [chatHistory, setChatHistory] = React.useState<ChatSession[]>([]);
   const [activeChatId, setActiveChatId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = (isUserInitiated = false) => {
+  const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector("div[data-radix-scroll-area-viewport]");
       if (viewport) {
-        const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 20;
-        if (isUserInitiated || isScrolledToBottom) {
-          setTimeout(() => {
+         setTimeout(() => {
             viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
           }, 100);
-        }
       }
     }
   };
 
   React.useEffect(() => {
-    // Only scroll to bottom for new messages from the assistant
-    if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
-      scrollToBottom();
+    // Only scroll to bottom for new messages from the assistant or user
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Heuristic to only scroll down if user sent the message or it's a new response.
+      if (lastMessage.role === 'user' || (lastMessage.role === 'assistant' && !document.hidden)) {
+          const viewport = scrollAreaRef.current?.querySelector("div[data-radix-scroll-area-viewport]");
+          if (viewport) {
+              const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 20;
+              if (isScrolledToBottom) {
+                  scrollToBottom();
+              }
+          }
+      }
     }
   }, [messages]);
 
@@ -69,7 +79,14 @@ const ChatArea = React.forwardRef<HTMLDivElement, {}>((props, ref) => {
     };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
-    scrollToBottom(true);
+    
+    // Manually trigger scroll for user messages
+    const viewport = scrollAreaRef.current?.querySelector("div[data-radix-scroll-area-viewport]");
+    if (viewport) {
+        setTimeout(() => {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+        }, 100);
+    }
 
 
     // If this is the first message of a new chat, create a new session
@@ -187,10 +204,4 @@ const ChatArea = React.forwardRef<HTMLDivElement, {}>((props, ref) => {
       </SidebarInset>
     </SidebarProvider>
   );
-});
-
-ChatArea.displayName = 'ChatArea';
-
-export default function Home() {
-  return <ChatArea />;
 }
