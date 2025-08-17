@@ -16,19 +16,22 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
   const [input, setInput] = React.useState("");
   const [currentJoke, setCurrentJoke] = React.useState("");
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const jokeVisible = React.useRef(false);
 
   React.useEffect(() => {
-    let jokeInterval: NodeJS.Timeout;
     if (isLoading) {
+      jokeVisible.current = true;
       setCurrentJoke(dadJokes[Math.floor(Math.random() * dadJokes.length)]);
-      jokeInterval = setInterval(() => {
-        setCurrentJoke(dadJokes[Math.floor(Math.random() * dadJokes.length)]);
-      }, 5000); // Change joke every 5 seconds
-    } else {
+    }
+  }, [isLoading]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    if (jokeVisible.current) {
+      jokeVisible.current = false;
       setCurrentJoke("");
     }
-    return () => clearInterval(jokeInterval);
-  }, [isLoading]);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,7 +55,7 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
         <Textarea
           ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Ask a question about procedures..."
           className="flex-1 resize-none bg-secondary/50"
@@ -91,8 +94,8 @@ export function ChatForm({ onSubmit, isLoading }: ChatFormProps) {
           )}
         </Button>
       </form>
-       {isLoading && currentJoke && (
-        <div className="text-center text-xs text-muted-foreground animate-pulse mt-2">
+       {currentJoke && (
+        <div className={`text-center text-xs text-muted-foreground mt-2 ${isLoading ? 'animate-pulse' : ''}`}>
           <p>Just for you while you wait: {currentJoke}</p>
         </div>
       )}
