@@ -1,5 +1,4 @@
-
-export const KNOWLEDGE_BASE = [
+export const KNOWLEDGE_BASE_JSON = [
   {
     "id": "content_0_0",
     "content": "--- Page1 --- U.S. DEPARTMENT OF TRANSPORTATION FEDERAL AVIATION ADMINISTRATION ORDER JO7110.65BB Air Traffic Organization Policy Effective date: February20, 2025 SUBJ: Air Traffic Control This order prescribes air traffic control procedures and phraseology for use by personnel providing air traffic control services. Controllers are required to be familiar with the provisions of this order that pertain to their operational responsibilities and to exercise their best judgment if they encounter situations not covered by it. Alyce Hood-Fleming Vice President, Mission Support Services Air Traffic Organization Distribution: ZAT - 710, ZAT - 464 Initiated By : AJ V - 0 --- Page2 --- RECORD OF CHANGES DIRECTIVE NO. JO7110.65BB CHANGE TO BASIC SUPPLEMENTS OPTIONAL CHANGE TO BASIC SUPPLEMENTS OPTIONAL FAA Form1320 − 5 (6 − 80) USE PREVIOUS EDITION --- Page3 --- Explanation of Changes Basic Direct questions through appropriate facility/service center office staff to the Office of Primary Interest (OPI) a. 2-6-4. ISSUING WEATHER AND CHAFF AREAS This change incorporates guidance in the use of satellite derived weather from the Offshore Precipitation Capability (OPC) into FAA JO Order7110.65, Air Traffic Control. b. 2 − 10 − 1. EN ROUTE OR OCEANIC SECTOR TEAM POSITION RESPONSIBILITIES5 − 13 − 10. ERAM VISUAL INDICATOR OF SPECIAL ACTIVITY AIRSPACE (SAA) STATUS Appendix B.",
@@ -150,9 +149,7 @@ export const KNOWLEDGE_BASE = [
     ],
     "summary": ". . . 1-2-21 − 2 − 3. NOTES . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ...."
   }
-]
-.map((item) => item.content)
-.join('\\n\\n');
+];
 
 export const CHAT_HISTORY = [
   { id: '1', title: 'Wake turbulence separation' },

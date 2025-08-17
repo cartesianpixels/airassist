@@ -20,12 +20,12 @@ const SuggestResourceInputSchema = z.object({
         title: z.string(),
         type: z.string(),
         procedure_type: z.string(),
-        chapter: z.string(),
-        section: z.string(),
-        paragraph: z.string(),
+        chapter: z.string().optional(),
+        section: z.string().optional(),
+        paragraph: z.string().optional(),
         source: z.string(),
-        chunk_index: z.number(),
-        total_chunks: z.number(),
+        chunk_index: z.number().optional(),
+        total_chunks: z.number().optional(),
       }),
       displayName: z.string(),
       tags: z.array(z.string()),
@@ -39,7 +39,7 @@ const SuggestResourceOutputSchema = z.object({
   resourceSuggestions: z.array(
     z.object({
       title: z.string().describe('The title of the resource.'),
-      link: z.string().describe('The link to the resource.'),
+      link: z.string().describe('A link to the resource. Use the document source and section if available.'),
       summary: z.string().describe('A brief summary of the resource.'),
     })
   ).describe('A list of suggested resources from the knowledge base.'),
@@ -61,9 +61,8 @@ Question: {{{question}}}
 Knowledge Base:
 {{{json knowledgeBase}}}
 
-Based on the question and the knowledge base, suggest relevant resources. Provide the title, link, and a brief summary for each suggested resource.
-
-Format your response as a JSON array of resource suggestions. Each resource suggestion should include the title, link, and summary.
+Based on the question and the knowledge base, suggest relevant resources. Provide the title, an anchor link to the relevant section (for example FAA 7110.65 Chapter 4, Section 2), and a brief summary for each suggested resource.
+Return an empty list if no relevant resources are found.
 `,
 });
 

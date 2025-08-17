@@ -2,14 +2,22 @@
 
 import { atcAssistantFlowWrapper } from "@/ai/assistant";
 import type { Message } from '@/lib/types';
-import { KNOWLEDGE_BASE } from "@/lib/mock-data";
 import { suggestResource } from "@/ai/flows/resource-suggestion";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 
 // A simple in-memory store for feedback. In a real app, use a database.
 const feedbackStore = {
   positive: 0,
   negative: 0,
 };
+
+async function getKnowledgeBase() {
+  const q = query(collection(db, "knowledge-base"), limit(50)); // Limit to 50 for performance in this prototype
+  const querySnapshot = await getDocs(q);
+  const knowledgeBase = querySnapshot.docs.map(doc => doc.data());
+  return knowledgeBase;
+}
 
 export async function getAiResponse(
   messages: Omit<Message, 'id' | 'resources'>[]
@@ -20,14 +28,19 @@ export async function getAiResponse(
   }
 
   try {
-    const answer = await atcAssistantFlowWrapper(messages);
+    const [answer, knowledgeBase] = await Promise.all([
+        atcAssistantFlowWrapper(messages),
+        getKnowledgeBase()
+    ]);
     
-    // Resource suggestions are disabled in this simplified approach
-    const resources = undefined;
+    const { resourceSuggestions } = await suggestResource({
+        question: lastMessage.content,
+        knowledgeBase: knowledgeBase as any,
+    });
 
     return {
       answer,
-      resources,
+      resources: resourceSuggestions.length > 0 ? resourceSuggestions : undefined,
     };
   } catch (error) {
     console.error('Error getting AI response:', error);
