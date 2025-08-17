@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -67,6 +68,9 @@ export default function Home() {
 
 
   const handleSendMessage = async (input: string) => {
+    const startTime = Date.now();
+    const minDisplayTime = 2500; // 2.5 seconds
+
     setIsLoading(true);
     let currentChatId = activeChatId;
 
@@ -115,6 +119,14 @@ export default function Home() {
     };
     
     const finalMessages = [...newMessages, assistantMessage];
+
+    const elapsedTime = Date.now() - startTime;
+    const remainingTime = minDisplayTime - elapsedTime;
+
+    if (remainingTime > 0) {
+      await new Promise(resolve => setTimeout(resolve, remainingTime));
+    }
+
     setMessages(finalMessages);
     setChatHistory(prev =>
       prev.map(chat =>
