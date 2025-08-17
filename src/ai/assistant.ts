@@ -7,24 +7,26 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import type {Message} from '@/lib/types';
+import {browse} from './tools/web-browser';
 
 const atcAssistantFlow = ai.defineFlow(
   {
     name: 'atcAssistantFlow',
     inputSchema: z.array(
       z.object({
-        role: z.enum(['user', 'assistant']),
+        role: z.enum(['user', 'assistant', 'tool']),
         content: z.string(),
       })
     ),
     outputSchema: z.string(),
+    tools: [browse],
   },
-  async messages => {
+  async (messages, streamingCallback) => {
     const history = messages
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n');
 
-    const prompt = `# MANDATORY SOURCE VERIFICATION PROTOCOL
+    const systemPrompt = `# MANDATORY SOURCE VERIFICATION PROTOCOL
 
 ## CRITICAL: You Must Actually Search and Find Information
 
@@ -37,7 +39,7 @@ Your current responses show you're providing generic aviation knowledge instead 
 **BEFORE anything else, you MUST search the provided knowledge base first.** This is your primary source of truth.
 
 #### Step 2: External Document Access
-If the information is not in the knowledge base, use web search to find current versions of reputable sources:
+If the information is not in the knowledge base, use the 'browse' tool to search current versions of reputable sources:
    - **Primary FAA Source**: FAA Order 7110.65 (current version is 7110.65BB as of Feb 2025)
    - **Secondary FAA Sources**: Specific 14 CFR sections, Aeronautical Information Manual (AIM) sections.
    - **Reputable Aviation Sources**: AOPA (aopa.org), Skybrary (skybrary.aero).
@@ -65,7 +67,7 @@ If the information is not in the knowledge base, use web search to find current 
 **Proper Research Process:**
 1.  [Search internal knowledge base for "fly-over", "fly-by", "waypoint"].
 2.  [Synthesize findings from knowledge base].
-3.  [If needed, perform web search: "faa fly-over vs fly-by waypoint aopa.org", "fly-over waypoint definition skybrary.aero"].
+3.  [If needed, perform web search using the browse tool: "https://www.skybrary.aero/search?search=fly-over+waypoint"].
 4.  [Synthesize all findings into a complete answer].
 
 **Answer based on research:**
@@ -77,13 +79,13 @@ While this is the standard definition, specific FMS implementations can vary. Al
 ### Quality Check Questions:
 Before sending any response, ask yourself:
 1. Did I check the knowledge base first?
-2. Did I actually search for and find this information in the specified sources?
+2. Did I actually search for and find this information in the specified sources (using the browse tool if necessary)?
 3. Can I provide the exact document section where this is located?
 4. Would a student be able to find this same information using my reference?
 5. If I say something "is not covered" in a document, did I actually check?
 
 ### When You Cannot Access Sources:
-If you cannot access the actual documents:
+If you cannot access the actual documents via the browse tool:
 - **Say so explicitly**: "I cannot currently access the full text of FAA Order 7110.65BB to verify this."
 - **Provide research guidance**: "To find this information, you should search for [topic] on the AOPA or Skybrary websites."
 - **Don't guess**: Never provide information you cannot verify.
@@ -99,8 +101,11 @@ ${history}
 Answer the last user question based on your instructions. You must always act as an Air Traffic Controller unless specified by the user.`;
 
     const llmResponse = await ai.generate({
-      prompt: prompt,
+      prompt: systemPrompt,
       model: 'googleai/gemini-2.0-flash',
+      history: messages,
+      tools: [browse],
+      streamingCallback,
     });
 
     return llmResponse.text;
@@ -110,5 +115,9 @@ Answer the last user question based on your instructions. You must always act as
 export async function atcAssistantFlowWrapper(
   messages: Omit<Message, 'id' | 'resources'>[]
 ): Promise<string> {
-  return atcAssistantFlow(messages);
+  const flowMessages = messages.map(m => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content
+  }));
+  return atcAssistantFlow(flowMessages);
 }
