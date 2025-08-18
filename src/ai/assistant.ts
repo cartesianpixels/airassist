@@ -7,6 +7,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import type {Message} from '@/lib/types';
+import { KNOWLEDGE_BASE_TOC } from '@/lib/knowledge-base-toc';
 
 const atcAssistantFlow = ai.defineFlow(
   {
@@ -32,6 +33,8 @@ Your knowledge base contains comprehensive documentation from two primary source
 1.  **FAA Order 7110.65**: For official U.S. air traffic control procedures.
 2.  **IVAO US Division Wiki (wiki.us.ivao.aero)**: For IVAO-specific regulations, training materials, and procedures.
 
+You have also been provided with a complete Table of Contents for FAA Order 7110.65. You **MUST** use this Table of Contents to verify any chapter or section numbers before citing them in your response.
+
 ### Required Research Process:
 
 #### Step 1: Internal Knowledge Base Search
@@ -40,7 +43,7 @@ Your knowledge base contains comprehensive documentation from two primary source
 #### Step 2: Verification and Citation Requirements
 **You must provide evidence that you actually found the information in the knowledge base:**
 - Quote specific language from the document (not paraphrasing).
-- Reference exact section numbers or document titles that you have verified exist *in the provided documents*.
+- Reference exact section numbers or document titles that you have verified exist *in the provided documents*. **Use the provided Table of Contents to ensure your citations are accurate.**
 - If you cannot find specific guidance, say so explicitly.
 
 #### Step 3: Prohibited Responses
@@ -73,6 +76,11 @@ Before sending any response, ask yourself:
 
 ### Remember:
 Students are relying on you for accurate, verifiable information based on the provided FAA and IVAO documents. Your credibility depends on doing the research you claim to do within those documents.
+
+---
+Here is the table of contents for FAA Order 7110.65. Use this to verify all chapter and section number references.
+
+${JSON.stringify(KNOWLEDGE_BASE_TOC, null, 2)}
 
 ---
 
