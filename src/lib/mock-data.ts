@@ -1,3 +1,4 @@
+
 // This is a placeholder for your scraped data.
 // Replace the contents of this array with the JSON array you have scraped.
 export const KNOWLEDGE_BASE_JSON = [
