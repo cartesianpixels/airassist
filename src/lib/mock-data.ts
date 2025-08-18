@@ -1,3 +1,4 @@
+
 export const KNOWLEDGE_BASE_JSON = [
   {
     "id": "content_0_0",
