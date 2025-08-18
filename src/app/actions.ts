@@ -3,7 +3,8 @@
 import { atcAssistantFlowWrapper } from "@/ai/assistant";
 import type { Message } from '@/lib/types';
 import { suggestResource } from "@/ai/flows/resource-suggestion";
-import { KNOWLEDGE_BASE } from "@/lib/knowledge-base";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 // A simple in-memory store for feedback. In a real app, use a database.
 const feedbackStore = {
@@ -12,7 +13,12 @@ const feedbackStore = {
 };
 
 async function getKnowledgeBase() {
-  return KNOWLEDGE_BASE;
+  const querySnapshot = await getDocs(collection(db, "knowledge-base"));
+  const knowledgeBase = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+  return knowledgeBase;
 }
 
 export async function getAiResponse(
