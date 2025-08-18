@@ -4,8 +4,7 @@
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import fetch from 'node-fetch';
-import {JSDOM} from 'jsdom';
+import { JSDOM } from 'jsdom';
 
 export const browse = ai.defineTool(
   {
