@@ -3,8 +3,9 @@ import { db } from "../lib/firebase";
 import { KNOWLEDGE_BASE_JSON } from "../lib/mock-data";
 
 // This function transforms your scraped data into the format the app expects.
-function transformData(scrapedData: any[]) {
-    return scrapedData.map((item, index) => {
+function transformData(scrapedData: any) {
+  const chapters = Object.values(scrapedData.faa_manual);
+    return chapters.map((item: any, index: number) => {
         // Basic function to extract keywords for tags. You can improve this.
         const generateTags = (content: string) => {
             if (!content) return [];
@@ -26,7 +27,7 @@ function transformData(scrapedData: any[]) {
 
         // Extract chapter and section from title if possible
         const titleMatch = item.title ? item.title.match(/Chapter (\d+) - Section (\d+)/) : null;
-        const chapter = titleMatch ? titleMatch[1] : (item.title ? item.title.match(/Chapter (\d+)/)?.[1] || "" : "");
+        const chapter = item.chapter_number || (titleMatch ? titleMatch[1] : (item.title ? item.title.match(/Chapter (\d+)/)?.[1] || "" : ""));
         const section = titleMatch ? titleMatch[2] : "";
 
 
@@ -35,14 +36,14 @@ function transformData(scrapedData: any[]) {
             content: item.content || `Scraped metadata for: ${item.title}. URL: ${item.url}. Word Count: ${item.word_count}.`,
             metadata: {
                 title: item.title || "Untitled",
-                type: "content",
+                type: item.type || "content",
                 procedure_type: "general", // You can define logic for this
-                chapter: chapter, 
+                chapter: chapter.toString(), 
                 section: section,
                 paragraph: "", // Placeholder
                 source: item.url && item.url.includes("faa.gov") ? "FAA JO 7110.65" : "IVAO", // Example logic
                 chunk_index: item.order || index,
-                total_chunks: scrapedData.length,
+                total_chunks: chapters.length,
                 url: item.url,
                 word_count: item.word_count,
                 char_count: item.char_count,
@@ -59,7 +60,7 @@ function transformData(scrapedData: any[]) {
 async function seedDatabase() {
     const dataToSeed = KNOWLEDGE_BASE_JSON;
 
-    if (dataToSeed.length === 0) {
+    if (!dataToSeed.faa_manual || Object.keys(dataToSeed.faa_manual).length === 0) {
         console.log("No data found in KNOWLEDGE_BASE_JSON. Please add your scraped data to src/lib/mock-data.ts.");
         return;
     }
