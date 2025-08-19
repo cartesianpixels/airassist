@@ -8,14 +8,18 @@ import { Input } from "./ui/input";
 import { Search } from "lucide-react";
 
 const examplePrompts = [
-  "What are the standard separation minima for aircraft on final approach?",
-  "Explain VFR-on-top procedures.",
-  "Summarize the IVAO rules for altimeter settings.",
-  "What is the maximum speed below 10,000 feet?",
-  "Describe the procedure for a go-around.",
   "What are the requirements for issuing a visual approach clearance?",
+  "Explain VFR-on-top procedures.",
+  "What are the separation minima for aircraft on the same runway?",
+  "Describe the procedure for a simulated flameout approach.",
+  "When can a controller use 'line up and wait'?",
+  "What are the procedures for handling an aircraft bomb threat?",
   "Explain the difference between QNH, QFE, and QNE.",
   "What are the lost communication procedures for an IFR flight?",
+  "Describe the procedures for military aerial refueling.",
+  "What are the separation requirements for aircraft operating in a non-standard formation?",
+  "When is a go-around required?",
+  "What are the required components of a departure clearance?",
 ];
 
 // Function to shuffle an array
