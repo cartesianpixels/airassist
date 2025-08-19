@@ -1,10 +1,16 @@
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { KNOWLEDGE_BASE_JSON } from "../lib/mock-data";
+import { YOUR_SCRAPED_KNOWLEDGE_BASE_JSON } from "../lib/mock-data";
 
 // This function transforms your scraped data into the format the app expects.
 function transformData(scrapedData: any) {
-  const chapters = Object.values(scrapedData.faa_manual);
+    if (!scrapedData || !scrapedData.faa_manual) {
+        console.error("Error: The provided data does not contain 'faa_manual' object.");
+        return [];
+    }
+    const chapters = Object.values(scrapedData.faa_manual);
+    console.log(`Found ${chapters.length} chapters to process.`);
+
     return chapters.map((item: any, index: number) => {
         // Basic function to extract keywords for tags. You can improve this.
         const generateTags = (content: string) => {
@@ -20,7 +26,7 @@ function transformData(scrapedData: any) {
             return Object.keys(wordCount).sort((a, b) => wordCount[b] - wordCount[a]).slice(0, 5);
         };
         
-        const id = `scraped_item_${item.order || index}`;
+        const id = `scraped_item_${item.title.replace(/\s+/g, '_') || index}`;
 
         // Create a summary (first 150 chars) or use title
         const summary = item.content ? item.content.substring(0, 150) + '...' : item.title;
@@ -58,16 +64,21 @@ function transformData(scrapedData: any) {
 
 
 async function seedDatabase() {
-    const dataToSeed = KNOWLEDGE_BASE_JSON;
+    const dataToSeed = YOUR_SCRAPED_KNOWLEDGE_BASE_JSON;
 
-    if (!dataToSeed.faa_manual || Object.keys(dataToSeed.faa_manual).length === 0) {
-        console.log("No data found in KNOWLEDGE_BASE_JSON. Please add your scraped data to src/lib/mock-data.ts.");
+    if (!dataToSeed || !dataToSeed.faa_manual || Object.keys(dataToSeed.faa_manual).length === 0) {
+        console.log("No data found in YOUR_SCRAPED_KNOWLEDGE_BASE_JSON. Please make sure you have pasted your data into src/lib/mock-data.ts.");
         return;
     }
 
     console.log("Transforming and seeding your scraped data...");
     
     const transformedData = transformData(dataToSeed);
+
+    if (transformedData.length === 0) {
+        console.error("Transformation resulted in no data. Please check the format of your JSON in src/lib/mock-data.ts.");
+        return;
+    }
     
     const batch = writeBatch(db);
     const knowledgeBaseCollection = collection(db, "knowledge-base");
@@ -80,8 +91,12 @@ async function seedDatabase() {
     try {
         await batch.commit();
         console.log(`Database seeded successfully with ${transformedData.length} documents!`);
-    } catch (error) {
-        console.error("Error seeding database: ", error);
+    } catch (error: any) {
+        console.error("Error seeding database: ", error.message);
+        if (error.code === 'not-found' || (error.code === 5 && error.message.includes("NOT_FOUND")) ) {
+            console.error("\nThis 'NOT_FOUND' error usually means the Firestore database has not been created yet.");
+            console.error("Please go to your Firebase project console, navigate to 'Build' -> 'Firestore Database', and click 'Create database'.");
+        }
     }
 }
 
