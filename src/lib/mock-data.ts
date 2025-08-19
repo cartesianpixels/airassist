@@ -3,6 +3,7 @@
 // Replace the contents of this array with the JSON array you have scraped.
 export const KNOWLEDGE_BASE_JSON = {
   "faa_manual": {
+    
     "chap_01_sec_01": {
       "title": "Chapter 1 - Section 1",
       "url": "https://www.faa.gov/air_traffic/publications/atpubs/atc_html/chap1_section_1.html",
@@ -1126,10 +1127,7 @@ export const KNOWLEDGE_BASE_JSON = {
       "type": "special"
     }
   }
-};
-
-
-// This is the original mock data for reference. It will not be used if you provide your own data above.
+}
 export const YOUR_SCRAPED_KNOWLEDGE_BASE_JSON = KNOWLEDGE_BASE_JSON;
 
 export const CHAT_HISTORY = [
