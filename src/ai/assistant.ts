@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for answering questions about FAA and IVAO procedures
@@ -7,7 +8,26 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import type {Message} from '@/lib/types';
-import { KNOWLEDGE_BASE_JSON } from "@/lib/mock-data";
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+
+
+async function getKnowledgeBase() {
+  const querySnapshot = await getDocs(collection(db, "knowledge-base"));
+  const knowledgeBase = querySnapshot.docs.map(doc => ({
+    text: doc.data().content,
+    metadata: {
+      id: doc.id,
+      title: doc.data().metadata.title,
+      type: doc.data().metadata.type,
+      chapter_number: doc.data().metadata.chapter,
+      section_number: doc.data().metadata.section,
+      url: doc.data().metadata.url,
+    }
+  }));
+  return knowledgeBase;
+}
+
 
 const atcAssistantFlow = ai.defineFlow(
   {
@@ -30,7 +50,7 @@ const atcAssistantFlow = ai.defineFlow(
 You must follow these steps for every query to ensure accuracy:
 
 1.  **Deconstruct the Query:** If a user asks a complex or comparative question (e.g., "the difference between X and Y"), break it down into individual components (search for X, then search for Y).
-2.  **Search the Primary Source:** For each component, exclusively search the \`documents\` array within your internal knowledge base, which contains FAA Order JO 7110.65. Your search must target the \`content\` field of each document object.
+2.  **Search the Primary Source:** For each component, exclusively search your internal knowledge base, which contains FAA Order JO 7110.65. Your search must target the \`text\` field of each document object.
 3.  **Identify the Source Document:** When you find relevant text, you have identified your source document.
 4.  **Extract Metadata for Citation:** From that **exact same document object**, you MUST extract the \`chapter_number\`, \`section_number\`, and \`title\` to build your citation.
 5.  **Synthesize and Cite:** Combine the information found for each component into a comprehensive answer. Each piece of information must be individually cited.
@@ -64,17 +84,7 @@ You must structure every response using the following template. The content for 
 ${lastMessage}
 `;
     
-    const knowledgeBaseDocuments = Object.values(KNOWLEDGE_BASE_JSON.faa_manual).map((doc: any) => ({
-      text: doc.content,
-      metadata: {
-        id: `scraped_item_${doc.title.replace(/\s+/g, '_')}`,
-        title: doc.title,
-        type: doc.type,
-        chapter_number: doc.chapter_number,
-        section_number: doc.section_number,
-        url: doc.url,
-      }
-    }));
+    const knowledgeBaseDocuments = await getKnowledgeBase();
 
     const llmResponse = await ai.generate({
       prompt: systemPrompt,

@@ -1,17 +1,19 @@
+
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { YOUR_SCRAPED_KNOWLEDGE_BASE_JSON } from "../lib/mock-data";
+import * as fs from 'fs';
+import * as path from 'path';
 
-// This function transforms your scraped data into the format the app expects.
-function transformData(scrapedData: any) {
-    if (!scrapedData || !scrapedData.faa_manual) {
-        console.error("Error: The provided data does not contain 'faa_manual' object.");
+// This function transforms scraped data into the format the app expects.
+function transformData(scrapedData: any, fileName: string) {
+    if (!scrapedData || !scrapedData.documents) {
+        console.error(`Error: The provided data in ${fileName} does not contain a 'documents' array.`);
         return [];
     }
-    const chapters = Object.values(scrapedData.faa_manual);
-    console.log(`Found ${chapters.length} chapters to process.`);
+    const documents = scrapedData.documents;
+    console.log(`Found ${documents.length} documents in ${fileName} to process.`);
 
-    return chapters.map((item: any, index: number) => {
+    return documents.map((item: any, index: number) => {
         // Basic function to extract keywords for tags. You can improve this.
         const generateTags = (content: string) => {
             if (!content) return [];
@@ -26,7 +28,7 @@ function transformData(scrapedData: any) {
             return Object.keys(wordCount).sort((a, b) => wordCount[b] - wordCount[a]).slice(0, 5);
         };
         
-        const id = `scraped_item_${item.title.replace(/\s+/g, '_') || index}`;
+        const id = `scraped_item_${item.title ? item.title.replace(/\s+/g, '_') : fileName + '_' + index}`;
 
         // Create a summary (first 150 chars) or use title
         const summary = item.content ? item.content.substring(0, 150) + '...' : item.title;
@@ -36,10 +38,9 @@ function transformData(scrapedData: any) {
         const chapter = item.chapter_number || (titleMatch ? titleMatch[1] : (item.title ? item.title.match(/Chapter (\d+)/)?.[1] || "" : ""));
         const section = titleMatch ? titleMatch[2] : "";
 
-
         return {
             id: id,
-            content: item.content || `Scraped metadata for: ${item.title}. URL: ${item.url}. Word Count: ${item.word_count}.`,
+            content: item.content || `Scraped metadata for: ${item.title}. URL: ${item.url}.`,
             metadata: {
                 title: item.title || "Untitled",
                 type: item.type || "content",
@@ -47,13 +48,13 @@ function transformData(scrapedData: any) {
                 chapter: chapter.toString(), 
                 section: section,
                 paragraph: "", // Placeholder
-                source: item.url && item.url.includes("faa.gov") ? "FAA JO 7110.65" : "IVAO", // Example logic
+                source: item.url || fileName,
                 chunk_index: item.order || index,
-                total_chunks: chapters.length,
+                total_chunks: documents.length,
                 url: item.url,
-                word_count: item.word_count,
-                char_count: item.char_count,
-                scraped_at: item.scraped_at,
+                word_count: item.word_count || (item.content ? item.content.split(' ').length : 0),
+                char_count: item.char_count || (item.content ? item.content.length : 0),
+                scraped_at: item.scraped_at || new Date().toISOString(),
             },
             displayName: item.title || "Untitled",
             tags: generateTags(item.content || item.title || ""),
@@ -64,33 +65,52 @@ function transformData(scrapedData: any) {
 
 
 async function seedDatabase() {
-    const dataToSeed = YOUR_SCRAPED_KNOWLEDGE_BASE_JSON;
+    const dataDir = path.join(process.cwd(), 'src', 'data');
+    let allDocuments: any[] = [];
 
-    if (!dataToSeed || !dataToSeed.faa_manual || Object.keys(dataToSeed.faa_manual).length === 0) {
-        console.log("No data found in YOUR_SCRAPED_KNOWLEDGE_BASE_JSON. Please make sure you have pasted your data into src/lib/mock-data.ts.");
+    try {
+        const files = fs.readdirSync(dataDir).filter(file => file.endsWith('.json'));
+
+        if (files.length === 0) {
+            console.log("No JSON files found in the src/data directory. Nothing to seed.");
+            return;
+        }
+
+        console.log(`Found ${files.length} knowledge base files to process.`);
+
+        for (const file of files) {
+            const filePath = path.join(dataDir, file);
+            const fileContent = fs.readFileSync(filePath, 'utf-8');
+            const jsonData = JSON.parse(fileContent);
+            const transformedData = transformData(jsonData, file);
+            allDocuments = allDocuments.concat(transformedData);
+        }
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            console.error("Error: The 'src/data' directory does not exist. Please create it and add your JSON knowledge base files.");
+        } else {
+            console.error("Error reading or parsing knowledge base files:", error.message);
+        }
         return;
     }
-
-    console.log("Transforming and seeding your scraped data...");
     
-    const transformedData = transformData(dataToSeed);
 
-    if (transformedData.length === 0) {
-        console.error("Transformation resulted in no data. Please check the format of your JSON in src/lib/mock-data.ts.");
+    if (allDocuments.length === 0) {
+        console.error("Transformation resulted in no data. Please check the format of your JSON files in src/data.");
         return;
     }
     
     const batch = writeBatch(db);
     const knowledgeBaseCollection = collection(db, "knowledge-base");
 
-    transformedData.forEach((item) => {
+    allDocuments.forEach((item) => {
         const docRef = doc(knowledgeBaseCollection, item.id);
         batch.set(docRef, item);
     });
 
     try {
         await batch.commit();
-        console.log(`Database seeded successfully with ${transformedData.length} documents!`);
+        console.log(`Database seeded successfully with ${allDocuments.length} total documents!`);
     } catch (error: any) {
         console.error("Error seeding database: ", error.message);
         if (error.code === 'not-found' || (error.code === 5 && error.message.includes("NOT_FOUND")) ) {
