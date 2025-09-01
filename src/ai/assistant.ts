@@ -8,24 +8,11 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 import type {Message} from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { getKnowledgeBaseForAI } from '@/lib/database';
 
 
 async function getKnowledgeBase() {
-  const querySnapshot = await getDocs(collection(db, "knowledge-base"));
-  const knowledgeBase = querySnapshot.docs.map(doc => ({
-    text: doc.data().content,
-    metadata: {
-      id: doc.id,
-      title: doc.data().metadata.title,
-      type: doc.data().metadata.type,
-      chapter_number: doc.data().metadata.chapter,
-      section_number: doc.data().metadata.section,
-      url: doc.data().metadata.url,
-    }
-  }));
-  return knowledgeBase;
+  return getKnowledgeBaseForAI();
 }
 
 
@@ -86,12 +73,15 @@ ${lastMessage}
     
     const knowledgeBaseDocuments = await getKnowledgeBase();
 
+    const prompt = `${systemPrompt}\n\nKnowledge base: ${JSON.stringify(knowledgeBaseDocuments)}\n\nConversation:\n${messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`;
+    
     const llmResponse = await ai.generate({
-      prompt: systemPrompt,
       model: 'googleai/gemini-2.0-flash',
-      history: messages,
-      context: knowledgeBaseDocuments,
-      streamingCallback,
+      prompt,
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 2000,
+      },
     });
 
     return llmResponse.text;
