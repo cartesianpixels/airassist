@@ -3,8 +3,13 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'AirAssist',
+  title: 'AirAssist - IVAO US Division',
   description: 'AI-powered training assistant for air traffic controllers',
+  icons: {
+    icon: '/icon',
+    shortcut: '/icon',
+    apple: '/apple-icon',
+  },
 };
 
 export default function RootLayout({

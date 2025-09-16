@@ -32,8 +32,8 @@ const nextConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   
-  // Performance optimizations
-  serverExternalPackages: ['pg', 'ioredis', '@qdrant/js-client-rest'],
+  // Performance optimizations - removed legacy dependencies
+  serverExternalPackages: ['@supabase/supabase-js'],
   
   // Security headers
   async headers() {

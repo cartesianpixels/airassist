@@ -1,56 +1,53 @@
 import { NextResponse } from 'next/server';
-import { getDatabase, getRedis } from '@/lib/database-pg';
+import { createClient } from '@/lib/supabase';
 
 export async function GET() {
   const checks = {
     timestamp: new Date().toISOString(),
     status: 'healthy',
-    version: process.env.npm_package_version || '2.0.0',
+    version: '3.0.0', // Updated for Supabase version
     services: {
-      database: 'unknown',
-      redis: 'unknown',
-      qdrant: 'unknown',
+      supabase: 'unknown',
+      openai: 'unknown',
     },
     environment: process.env.NODE_ENV || 'development',
   };
 
   try {
-    // Check PostgreSQL connection
-    const db = getDatabase();
-    const client = await db.connect();
-    await client.query('SELECT 1');
-    client.release();
-    checks.services.database = 'healthy';
+    // Check Supabase connection
+    const supabase = createClient();
+    const { data, error } = await supabase.from('knowledge_base').select('count', { count: 'exact', head: true });
+
+    if (error) {
+      throw error;
+    }
+
+    checks.services.supabase = 'healthy';
   } catch (error) {
-    console.error('Database health check failed:', error);
-    checks.services.database = 'unhealthy';
+    console.error('Supabase health check failed:', error);
+    checks.services.supabase = 'unhealthy';
     checks.status = 'degraded';
   }
 
   try {
-    // Check Redis connection
-    const redis = getRedis();
-    await redis.ping();
-    checks.services.redis = 'healthy';
+    // Check OpenAI API key is configured
+    if (process.env.OPENAI_API_KEY) {
+      checks.services.openai = 'configured';
+    } else {
+      checks.services.openai = 'not_configured';
+      checks.status = 'degraded';
+    }
   } catch (error) {
-    console.error('Redis health check failed:', error);
-    checks.services.redis = 'unhealthy';
-    checks.status = 'degraded';
-  }
-
-  try {
-    // Check Qdrant connection
-    const qdrantUrl = process.env.QDRANT_URL || 'http://localhost:6333';
-    const response = await fetch(`${qdrantUrl}/health`, { signal: AbortSignal.timeout(5000) });
-    checks.services.qdrant = response.ok ? 'healthy' : 'unhealthy';
-  } catch (error) {
-    console.error('Qdrant health check failed:', error);
-    checks.services.qdrant = 'unhealthy';
+    console.error('OpenAI check failed:', error);
+    checks.services.openai = 'unhealthy';
     checks.status = 'degraded';
   }
 
   // Determine overall status
-  const unhealthyServices = Object.values(checks.services).filter(status => status === 'unhealthy');
+  const unhealthyServices = Object.values(checks.services).filter(status =>
+    status === 'unhealthy' || status === 'not_configured'
+  );
+
   if (unhealthyServices.length > 0) {
     checks.status = unhealthyServices.length === Object.keys(checks.services).length ? 'unhealthy' : 'degraded';
   }

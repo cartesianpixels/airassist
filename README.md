@@ -1,18 +1,18 @@
-# ✈️ ATC Assistant - AI-Powered Aviation Guidance System
+# ✈️ AirAssist - IVAO US Division AI Assistant
 
 <div align="center">
 
-![ATC Assistant](https://img.shields.io/badge/ATC%20Assistant-v2.0.0-blue?style=for-the-badge)
-![Fly.io](https://img.shields.io/badge/Deploy-Fly.io-purple?style=for-the-badge)
-![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![AirAssist](https://img.shields.io/badge/AirAssist-v3.0.0-blue?style=for-the-badge)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15.x-black?style=for-the-badge&logo=next.js&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
 
-**🤖 AI-powered assistant for Air Traffic Control procedures, regulations, and flight operations**
+**🤖 AI-powered assistant for IVAO US Division air traffic control training and procedures**
 
-*Built with Next.js, PostgreSQL, pgvector, and advanced semantic search capabilities*
+*Built with Next.js, Supabase, OpenAI, and modern streaming chat interface*
 
-[**🚀 Deploy Now**](DEPLOY-GUIDE.md) • [**📖 Documentation**](#-documentation) • [**💡 Features**](#-features) • [**🛠️ Development**](#️-development)
+[**🚀 Deploy on Vercel**](https://vercel.com/deploy) • [**📖 Documentation**](#-documentation) • [**💡 Features**](#-features) • [**🛠️ Development**](#️-development)
 
 </div>
 
@@ -20,52 +20,62 @@
 
 ## 🎯 Quick Start
 
-### 🚀 Deploy to Fly.io (Easiest)
+### 🚀 Deploy to Vercel (Recommended)
 ```bash
-# 1. Run the magic deployment script
-./deploy-fly.sh
+# 1. Clone the repository
+git clone https://github.com/your-username/airassist.git
+cd airassist
 
-# 2. Enter your API keys when prompted
-# 3. That's it! Your app will be live in minutes
+# 2. Deploy to Vercel
+vercel deploy
+
+# 3. Set up Supabase and add environment variables
+# 4. Run the data migration script
+npm run migrate
 ```
 
-**👉 [Complete Deployment Guide](DEPLOY-GUIDE.md)** - Step-by-step for non-technical users
-
-### 💻 Local Development  
+### 💻 Local Development
 ```bash
-# Quick setup
-docker-compose -f docker-compose.dev.yml up -d
-npm install && npm run dev
-```
+# 1. Clone and setup
+git clone https://github.com/your-username/airassist.git
+cd airassist
+npm install
 
-**👉 [Development Guide](#️-development)** - Full development setup
+# 2. Setup environment
+cp .env.example .env.local
+# Add your Supabase and OpenAI keys
+
+# 3. Start development server
+npm run dev
+```
 
 ---
 
 ## ✨ Features
 
 ### 🤖 AI-Powered Intelligence
-- **Gemini 2.0 Flash Integration** - Latest Google AI for accurate ATC guidance
+- **OpenAI GPT-4** - Latest OpenAI model for accurate ATC guidance
 - **Real-time Streaming** - Watch AI responses generate live with thinking process
-- **Semantic Search** - Vector-based search using pgvector for precise answers
-- **Smart Token Management** - No more quota issues! Only relevant chunks sent to AI
+- **Semantic Search** - Vector-based search using Supabase pgvector for precise answers
+- **Smart Context Management** - Intelligent conversation history and knowledge retrieval
 
-### 🏗️ Production-Ready Architecture
-- **Fly.io Deployment** - One-click deployment with automatic scaling
-- **PostgreSQL + pgvector** - Enterprise-grade database with vector search
-- **Redis Caching** - Smart embedding cache with 7-day expiry
-- **Docker Compose** - Full containerization for any platform
+### 🏗️ Modern Cloud Architecture
+- **Supabase Backend** - Serverless PostgreSQL with built-in authentication
+- **Vercel Deployment** - Edge deployment with automatic scaling
+- **Vector Search** - pgvector extension for semantic knowledge retrieval
+- **Real-time Streaming** - Server-sent events for responsive chat experience
 
-### 🎨 Modern User Experience
+### 🎨 Enhanced User Experience
 - **Streaming Chat Interface** - See responses as they're generated
 - **Thinking Display** - Shows AI reasoning process while working
-- **Enhanced UI/UX** - Beautiful gradients, animations, and modern design
-- **Chat History** - Persistent conversations with smart session management
+- **Beautiful UI/UX** - Modern design with gradients, animations, and micro-interactions
+- **Authentication** - Google OAuth integration via Supabase Auth
+- **Chat Sessions** - Persistent conversations with smart session management
 
 ### 🔒 Security & Performance
-- **Secure Environment Management** - Proper secret handling via Fly.io
-- **Rate Limiting** - Built-in protection against abuse
-- **Health Monitoring** - Comprehensive health checks and logging
+- **Row Level Security** - Supabase RLS for data isolation
+- **Environment Security** - Secure secret management
+- **Edge Computing** - Fast response times worldwide
 - **Auto-scaling** - Handles traffic spikes automatically
 
 ---
@@ -76,38 +86,44 @@ npm install && npm run dev
 
 ```mermaid
 graph TB
-    subgraph "🌐 Fly.io Cloud"
-        A[Next.js App Container]
-        B[PostgreSQL + pgvector]
-        C[Redis Cache]
-        D[Qdrant Vector DB]
+    subgraph "🌐 Vercel Edge"
+        A[Next.js App]
+        B[API Routes]
+        C[Streaming Chat]
     end
-    
+
+    subgraph "☁️ Supabase Cloud"
+        D[PostgreSQL + pgvector]
+        E[Authentication]
+        F[Real-time]
+        G[Storage]
+    end
+
     subgraph "🤖 AI Services"
-        E[Google Gemini 2.0]
-        F[OpenAI Embeddings]
+        H[OpenAI GPT-4]
+        I[OpenAI Embeddings]
     end
-    
-    subgraph "💡 Core Features"
-        G[Semantic Search Engine]
-        H[Streaming Chat System]
-        I[Knowledge Base RAG]
+
+    subgraph "👤 User Features"
+        J[Google OAuth]
+        K[Chat Sessions]
+        L[Knowledge Search]
     end
-    
+
     A --> B
-    A --> C
+    B --> C
     A --> D
     A --> E
-    A --> F
-    G --> B
-    G --> D
-    H --> A
-    I --> G
-    
-    style A fill:#0066cc,stroke:#ffffff,color:#ffffff
-    style B fill:#336791,stroke:#ffffff,color:#ffffff
-    style C fill:#dc382d,stroke:#ffffff,color:#ffffff
-    style D fill:#24b47e,stroke:#ffffff,color:#ffffff
+    C --> H
+    L --> I
+    J --> E
+    K --> D
+    L --> D
+
+    style A fill:#000000,stroke:#ffffff,color:#ffffff
+    style D fill:#3ECF8E,stroke:#ffffff,color:#ffffff
+    style H fill:#412991,stroke:#ffffff,color:#ffffff
+    style E fill:#3ECF8E,stroke:#ffffff,color:#ffffff
 ```
 
 </div>
@@ -116,79 +132,83 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Frontend** | Next.js 15 + React | Server-side rendering, routing |
+| **Frontend** | Next.js 15 + React | Server-side rendering, App Router |
 | **UI/UX** | Tailwind CSS + Radix UI | Modern, accessible components |
-| **Database** | PostgreSQL 16 + pgvector | Vector storage, full-text search |
-| **Caching** | Redis | Embedding cache, sessions |
-| **Vector DB** | Qdrant | Dedicated vector similarity search |
-| **AI** | Google Gemini 2.0 Flash | Main conversation AI |
-| **Embeddings** | OpenAI ada-002 | Text vectorization |
-| **Deployment** | Fly.io | Auto-scaling cloud platform |
-| **Containers** | Docker + Docker Compose | Consistent deployments |
+| **Database** | Supabase (PostgreSQL + pgvector) | Vector storage, authentication |
+| **Authentication** | Supabase Auth + Google OAuth | Secure user management |
+| **AI** | OpenAI GPT-4 | Main conversation AI |
+| **Embeddings** | OpenAI text-embedding-ada-002 | Text vectorization |
+| **Deployment** | Vercel | Edge deployment platform |
+| **Real-time** | Server-Sent Events | Streaming responses |
 
 ---
 
 ## 📖 Documentation
 
-### 🚀 Deployment Guides
-- **[Complete Deployment Guide](DEPLOY-GUIDE.md)** - Everything you need to deploy
-- **[Testing Guide](TESTING.md)** - Quality assurance and validation
+### 🚀 Setup Guides
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Complete setup instructions
+- **[Supabase Migration](SUPABASE_MIGRATION_PLAN.md)** - Database setup and migration
 
 ### 📋 Reference Docs
 | Document | Purpose |
 |----------|---------|
-| **[API Reference](#-api-reference)** | Endpoint documentation |
 | **[Environment Variables](#-environment-variables)** | Configuration options |
-| **[Docker Setup](#-docker-deployment)** | Container deployment |
+| **[API Reference](#-api-reference)** | Endpoint documentation |
 | **[Troubleshooting](#-troubleshooting)** | Common issues & solutions |
 
 ---
 
 ## 💸 Cost Breakdown
 
-### Fly.io Hosting (Monthly)
-- **App Container**: ~$5-10 (shared CPU, 1GB RAM)
-- **PostgreSQL**: ~$0-15 (3GB storage, backup included)  
-- **Redis**: ~$0 (free tier sufficient)
+### Vercel Hosting (Monthly)
+- **Hobby Plan**: Free (up to 100GB bandwidth)
+- **Pro Plan**: $20/month (1TB bandwidth, team features)
 
-### AI API Usage
-- **Google Gemini**: ~$0.01 per conversation
-- **OpenAI Embeddings**: ~$0.10 per 1000 searches
+### Supabase (Monthly)
+- **Free Tier**: $0 (500MB database, 50MB file storage)
+- **Pro Plan**: $25/month (8GB database, 100GB file storage)
 
-**💰 Total: ~$10-25/month** (scales with usage)
+### OpenAI API Usage
+- **GPT-4**: ~$0.03 per conversation
+- **Embeddings**: ~$0.0001 per 1K tokens
+
+**💰 Total: $0-45/month** (scales with usage)
 
 ---
 
 ## 🔧 Environment Variables
 
-| Variable | Description | Required | Default |
+| Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| `GOOGLE_API_KEY` | Google Gemini API key | ✅ | - |
-| `OPENAI_API_KEY` | OpenAI embeddings key | ✅ | - |
-| `DATABASE_URL` | PostgreSQL connection | Auto | Fly.io managed |
-| `REDIS_URL` | Redis connection | Auto | Fly.io managed |
-| `NEXTAUTH_SECRET` | Auth encryption key | Auto | Generated |
-| `NEXT_PUBLIC_APP_URL` | Public app URL | Auto | Fly.io domain |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | ✅ | `https://xxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | ✅ | `eyJ...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service key | ✅ | `eyJ...` |
+| `OPENAI_API_KEY` | OpenAI API key | ✅ | `sk-...` |
+| `NEXT_PUBLIC_APP_URL` | Public app URL | Auto | `https://your-app.vercel.app` |
 
-**🔒 Security**: All secrets are managed securely via Fly.io's encrypted secrets system.
+**🔒 Security**: All secrets are managed securely via Vercel environment variables and Supabase.
 
 ---
 
 ## 🛠️ Development
 
-### 🚀 Quick Development Setup
+### 🚀 Development Setup
 ```bash
 # 1. Clone and navigate
 git clone https://github.com/your-username/airassist.git
 cd airassist
 
-# 2. Start databases (Docker required)
-docker-compose -f docker-compose.dev.yml up -d
-
-# 3. Install dependencies and start
+# 2. Install dependencies
 npm install
-cp .env.example .env  # Add your API keys
-npm run db:migrate
+
+# 3. Setup environment
+cp .env.example .env.local
+# Add your Supabase and OpenAI keys
+
+# 4. Run database migrations (if needed)
+npm run migrate
+
+# 5. Start development server
 npm run dev
 ```
 
@@ -197,39 +217,46 @@ npm run dev
 ### 📂 Project Structure
 ```
 airassist/
-├── 🎯 DEPLOY-GUIDE.md          # Complete deployment guide
-├── 🧪 TESTING.md               # Testing procedures
-├── 🐳 Dockerfile.fly           # Fly.io optimized container
-├── ⚡ fly.toml                  # Fly.io configuration
-├── 🚀 deploy-fly.sh            # One-click deployment script
+├── 📝 README.md                    # This file
+├── 📋 DEPLOYMENT_GUIDE.md          # Setup instructions
+├── 🗄️ SUPABASE_MIGRATION_PLAN.md  # Database setup
+├── 🔧 vercel.json                 # Vercel configuration
 │
 ├── src/
-│   ├── 🤖 ai/                  # AI logic and flows
-│   │   ├── assistant.ts        # Main AI assistant with streaming
-│   │   └── genkit.ts          # Genkit AI configuration
+│   ├── 🌐 app/                     # Next.js app router
+│   │   ├── api/                    # API routes
+│   │   │   ├── health/             # Health check endpoint
+│   │   │   └── chat/               # Streaming chat API
+│   │   ├── auth/                   # Authentication pages
+│   │   ├── page.tsx               # Main chat interface
+│   │   └── layout.tsx             # App layout and metadata
 │   │
-│   ├── 🌐 app/                 # Next.js app router
-│   │   ├── api/               # API routes
-│   │   │   ├── health/        # Health check endpoint
-│   │   │   └── chat/stream/   # Streaming chat API
-│   │   ├── page.tsx           # Main application page
-│   │   └── enhanced-page.tsx  # Enhanced streaming UI
+│   ├── 🎨 components/             # React components
+│   │   ├── auth/                  # Authentication components
+│   │   ├── enhanced-chat-*        # Modern streaming chat UI
+│   │   ├── thinking-display       # AI reasoning display
+│   │   └── ui/                    # Reusable UI components
 │   │
-│   ├── 🎨 components/         # React components
-│   │   ├── enhanced-chat-*    # Modern streaming chat UI
-│   │   ├── thinking-display   # AI reasoning display
-│   │   └── ui/               # Reusable UI components
+│   ├── 🔧 lib/                    # Core utilities
+│   │   ├── supabase.ts            # Client-side Supabase
+│   │   ├── supabase-server.ts     # Server-side Supabase
+│   │   ├── database-supabase.ts   # Database operations
+│   │   ├── embeddings.ts          # OpenAI embedding service
+│   │   └── semantic-search.ts     # Vector similarity search
 │   │
-│   ├── 🔧 lib/                # Core utilities
-│   │   ├── database-pg.ts     # PostgreSQL + pgvector
-│   │   ├── embeddings.ts      # OpenAI embedding service
-│   │   └── semantic-search.ts # Vector similarity search
+│   ├── 📊 hooks/                  # React hooks
+│   │   └── useSupabaseChat.ts     # Chat functionality
 │   │
-│   └── 📊 hooks/              # React hooks
-│       └── use-streaming-chat # Real-time chat streaming
+│   ├── 🔒 middleware.ts           # Auth middleware
+│   └── 📝 types/                  # TypeScript definitions
 │
-├── 🗄️ db/init/                # Database initialization
-└── 🐳 docker-compose*.yml     # Container orchestration
+├── 🗄️ supabase/                   # Database schema
+│   └── migrations/                # SQL migration files
+│
+├── 📦 scripts/                    # Utility scripts
+│   └── migrate-to-supabase.ts     # Data migration tool
+│
+└── 🐳 dumps/                      # SQL dump files (for migration)
 ```
 
 ### 🔧 Available Commands
@@ -238,9 +265,8 @@ airassist/
 |---------|---------|
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
-| `npm run db:migrate` | Initialize database schema |
-| `npm run seed` | Import knowledge base |
-| `npm run docker:dev` | Start development databases |
+| `npm run start` | Start production server |
+| `npm run migrate` | Import data to Supabase |
 | `npm run typecheck` | TypeScript validation |
 | `npm run lint` | Code quality checks |
 
@@ -251,13 +277,14 @@ airassist/
 ### Health Check
 ```bash
 GET /api/health
-# Returns system status and service health
+# Returns: System status and service health
 ```
 
 ### Chat Streaming
 ```bash
-POST /api/chat/stream
+POST /api/chat
 Content-Type: application/json
+Authorization: Bearer <supabase-jwt>
 
 {
   "messages": [
@@ -265,49 +292,6 @@ Content-Type: application/json
   ]
 }
 # Returns: Server-Sent Events stream
-```
-
-### Knowledge Search  
-```bash
-POST /api/search
-Content-Type: application/json
-
-{
-  "query": "runway incursion procedures",
-  "limit": 10
-}
-# Returns: Relevant knowledge base entries
-```
-
----
-
-## 🐳 Docker Deployment
-
-### Development
-```bash
-# Start only databases for local development
-docker-compose -f docker-compose.dev.yml up -d
-
-# Check services
-docker-compose -f docker-compose.dev.yml ps
-```
-
-### Self-Hosted Production
-```bash
-# Full stack deployment
-docker-compose up --build -d
-
-# With nginx reverse proxy
-docker-compose --profile production up -d
-```
-
-### Fly.io (Recommended)
-```bash
-# One-click deployment
-./deploy-fly.sh
-
-# Manual deployment
-flyctl deploy --dockerfile Dockerfile.fly
 ```
 
 ---
@@ -318,25 +302,44 @@ flyctl deploy --dockerfile Dockerfile.fly
 
 | Issue | Solution |
 |-------|----------|
-| **Port conflicts** | `docker-compose down && docker system prune` |
-| **Database won't connect** | Check `DATABASE_URL` and restart containers |
-| **API quota exceeded** | Verify API keys and usage limits |
-| **Embeddings not working** | Check `OPENAI_API_KEY` and Redis connection |
-| **Streaming not working** | Verify WebSocket connections and CORS |
+| **Supabase connection fails** | Check URL and keys in environment variables |
+| **OpenAI API errors** | Verify `OPENAI_API_KEY` and account credits |
+| **Authentication not working** | Configure Google OAuth in Supabase dashboard |
+| **Migration script fails** | Ensure dumps/ directory contains SQL files |
+| **Streaming not working** | Check CORS and API route configuration |
 
 ### Debug Commands
 ```bash
 # Check service health
 curl http://localhost:3000/api/health
 
-# View application logs
-docker-compose logs -f app
+# Test authentication
+curl -H "Authorization: Bearer <token>" http://localhost:3000/api/chat
 
-# Test database connection  
-docker-compose exec postgres psql -U airassist_user -d airassist
+# Run migration with debug
+npm run migrate
 
-# Clear caches
-docker-compose exec redis redis-cli flushall
+# Check TypeScript issues
+npm run typecheck
+```
+
+---
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+1. **Connect Repository**: Link your GitHub repo to Vercel
+2. **Environment Variables**: Add all required env vars in Vercel dashboard
+3. **Deploy**: Automatic deployments on every push to main
+4. **Custom Domain**: Configure your domain in Vercel settings
+
+### Manual Deployment
+```bash
+# Build for production
+npm run build
+
+# Deploy to your preferred platform
+npm run start
 ```
 
 ---
@@ -345,17 +348,17 @@ docker-compose exec redis redis-cli flushall
 
 <div align="center">
 
-**🚨 FOR EDUCATIONAL AND SIMULATION USE ONLY 🚨**
+**🚨 FOR IVAO TRAINING AND EDUCATIONAL USE ONLY 🚨**
 
-This AI assistant is designed for **IVAO virtual air traffic control training** and **educational purposes**.
+This AI assistant is designed for **IVAO US Division virtual air traffic control training** and **educational purposes**.
 
-❌ **DO NOT** use for real-world ATC operations  
-❌ **DO NOT** use for actual flight training  
-❌ **DO NOT** replace official FAA publications  
+❌ **DO NOT** use for real-world ATC operations
+❌ **DO NOT** use for actual flight training
+❌ **DO NOT** replace official FAA publications
 
-✅ **DO** use for IVAO controller training  
-✅ **DO** use for studying ATC procedures  
-✅ **DO** cross-reference with official sources  
+✅ **DO** use for IVAO controller training
+✅ **DO** use for studying ATC procedures
+✅ **DO** cross-reference with official sources
 
 </div>
 
@@ -366,7 +369,7 @@ This AI assistant is designed for **IVAO virtual air traffic control training** 
 We welcome contributions! Here's how:
 
 1. **🍴 Fork** the repository
-2. **🌿 Create** feature branch: `git checkout -b feature/amazing-feature`  
+2. **🌿 Create** feature branch: `git checkout -b feature/amazing-feature`
 3. **✨ Make** your changes with tests
 4. **📝 Commit** with clear messages: `git commit -m 'Add amazing feature'`
 5. **🚀 Push** to your branch: `git push origin feature/amazing-feature`
@@ -374,10 +377,10 @@ We welcome contributions! Here's how:
 
 ### Development Guidelines
 - Follow TypeScript best practices
-- Add tests for new features  
+- Add tests for new features
 - Update documentation
-- Ensure Docker builds work
-- Test deployment scripts
+- Test with real Supabase/OpenAI APIs
+- Ensure responsive design works
 
 ---
 
@@ -386,13 +389,10 @@ We welcome contributions! Here's how:
 <div align="center">
 
 ### Get Help
-🐛 [**Report Issues**](https://github.com/your-username/airassist/issues) • 💬 [**Discussions**](https://github.com/your-username/airassist/discussions) • 📧 [**Email**](mailto:support@example.com)
+🐛 [**Report Issues**](https://github.com/your-username/airassist/issues) • 💬 [**Discussions**](https://github.com/your-username/airassist/discussions) • 📧 [**IVAO US**](mailto:training@ivaousa.org)
 
-### Stats & Info
-![GitHub stars](https://img.shields.io/github/stars/your-username/airassist?style=social)
-![GitHub forks](https://img.shields.io/github/forks/your-username/airassist?style=social)
-![GitHub issues](https://img.shields.io/github/issues/your-username/airassist)
-![GitHub license](https://img.shields.io/github/license/your-username/airassist)
+### IVAO US Division
+🌐 [**Website**](https://us.ivao.aero) • 📚 [**Training**](https://us.ivao.aero/training) • 💬 [**Discord**](https://discord.gg/ivaousa)
 
 </div>
 
@@ -402,15 +402,15 @@ We welcome contributions! Here's how:
 
 <div align="center">
 
-**Built with ❤️ for the aviation community**
+**Built with ❤️ for the IVAO US Division community**
 
 Special thanks to:
-- **🛩️ FAA** - Aviation procedures and regulations
-- **🌍 IVAO** - Virtual air traffic control standards  
-- **🤖 OpenAI** - Embedding models and AI research
-- **🧠 Google** - Gemini AI models
-- **🚀 Fly.io** - Cloud deployment platform
-- **🐳 Docker** - Containerization technology
+- **🛩️ FAA** - Aviation procedures and regulations source
+- **🌍 IVAO US Division** - Virtual air traffic control standards
+- **🤖 OpenAI** - GPT models and embedding technology
+- **☁️ Supabase** - Modern backend infrastructure
+- **⚡ Vercel** - Edge deployment platform
+- **🎨 Radix UI** - Accessible component library
 
 ---
 
@@ -418,6 +418,6 @@ Special thanks to:
 
 This project is licensed under the **MIT License** - see [LICENSE](LICENSE) for details.
 
-**© 2024 ATC Assistant. Made for aviators, by aviators.**
+**© 2024 AirAssist - IVAO US Division. Made for virtual aviators, by virtual aviators.**
 
-</div>  
+</div>

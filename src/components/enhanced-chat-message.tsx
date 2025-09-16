@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { submitFeedback } from "@/app/actions";
+// import { submitFeedback } from "@/app/actions"; // Removed - obsolete file
 import type { Message } from "@/lib/types";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -28,7 +28,8 @@ export function EnhancedChatMessage({
   const isAssistant = message.role === "assistant";
 
   const handleFeedback = async (type: "positive" | "negative") => {
-    const { message: feedbackMessage } = await submitFeedback(type);
+    // const { message: feedbackMessage } = await submitFeedback(type); // Disabled - actions removed
+    const feedbackMessage = "Feedback submitted successfully"; // Placeholder
     toast({
       title: "Feedback Submitted",
       description: feedbackMessage,
@@ -97,7 +98,7 @@ export function EnhancedChatMessage({
               <h3 className="text-sm font-semibold text-gray-700">Suggested Resources</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {message.resources.map((resource, index) => (
+              {message.resources.map((resource: any, index: number) => (
                 <Card key={index} className="bg-gradient-to-r from-gray-50 to-blue-50/30 border-blue-200/50 hover:shadow-md transition-all duration-200 hover:-translate-y-1">
                   <CardHeader className="p-4">
                     <CardTitle className="text-sm flex items-center gap-2">

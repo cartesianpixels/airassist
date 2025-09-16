@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { semanticSearch } from '@/lib/semantic-search';
+import { supabaseSemanticSearch } from '@/lib/database-supabase';
+import { createClient } from '@/lib/supabase-server';
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
@@ -16,14 +17,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-async function getRelevantKnowledge(query: string) {
+async function getRelevantKnowledge(query: string, userId?: string) {
   try {
-    console.log(`Searching knowledge for: "${query.substring(0, 100)}"`);
+    console.log(`Searching Supabase knowledge for: "${query.substring(0, 100)}"`);
 
-    const results = await semanticSearch(query, {
+    const results = await supabaseSemanticSearch(query, {
       limit: 5, // Reduced from 10
       threshold: 0.6 // Increased threshold for better relevance
-    });
+    }, userId);
 
     console.log(`Found ${results.length} relevant documents`);
 
@@ -42,7 +43,7 @@ Content: ${truncatedText}
 ---`;
     }).join('\n');
   } catch (error) {
-    console.error('Knowledge search error:', error);
+    console.error('Supabase knowledge search error:', error);
     return "Error searching knowledge base.";
   }
 }
@@ -52,15 +53,30 @@ export async function POST(request: NextRequest) {
   console.log(`[${requestId}] Starting OpenAI chat request`);
 
   try {
+    // Get user from Supabase auth
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error(`[${requestId}] Authentication error:`, authError);
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     const body = await request.json();
     const { messages } = RequestSchema.parse(body);
 
-    console.log(`[${requestId}] Processing ${messages.length} messages`);
+    console.log(`[${requestId}] Processing ${messages.length} messages for user ${user.id}`);
 
     const lastMessage = messages[messages.length - 1]?.content || '';
 
-    // Get relevant knowledge
-    const knowledge = await getRelevantKnowledge(lastMessage);
+    // Get relevant knowledge with user context
+    const knowledge = await getRelevantKnowledge(lastMessage, user.id);
 
     // System prompt
     const systemMessage = {
@@ -134,7 +150,7 @@ Answer the user's question based on this knowledge.`
     return new Response(
       JSON.stringify({
         error: 'Request failed',
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Unknown error',
         requestId
       }),
       {
