@@ -30,8 +30,6 @@ cd airassist
 vercel deploy
 
 # 3. Set up Supabase and add environment variables
-# 4. Run the data migration script
-npm run migrate
 ```
 
 ### 💻 Local Development
@@ -146,8 +144,8 @@ graph TB
 ## 📖 Documentation
 
 ### 🚀 Setup Guides
-- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Complete setup instructions
-- **[Supabase Migration](SUPABASE_MIGRATION_PLAN.md)** - Database setup and migration
+- **Environment Setup** - Configure Supabase and OpenAI keys
+- **Vercel Deployment** - Connect repository for auto-deploy
 
 ### 📋 Reference Docs
 | Document | Purpose |
@@ -205,10 +203,7 @@ npm install
 cp .env.example .env.local
 # Add your Supabase and OpenAI keys
 
-# 4. Run database migrations (if needed)
-npm run migrate
-
-# 5. Start development server
+# 4. Start development server
 npm run dev
 ```
 
@@ -218,45 +213,38 @@ npm run dev
 ```
 airassist/
 ├── 📝 README.md                    # This file
-├── 📋 DEPLOYMENT_GUIDE.md          # Setup instructions
-├── 🗄️ SUPABASE_MIGRATION_PLAN.md  # Database setup
 ├── 🔧 vercel.json                 # Vercel configuration
+├── 📦 package.json                # Dependencies
+├── ⚡ next.config.ts              # Next.js configuration
+├── 🎨 tailwind.config.ts          # Tailwind CSS config
 │
-├── src/
-│   ├── 🌐 app/                     # Next.js app router
-│   │   ├── api/                    # API routes
-│   │   │   ├── health/             # Health check endpoint
-│   │   │   └── chat/               # Streaming chat API
-│   │   ├── auth/                   # Authentication pages
-│   │   ├── page.tsx               # Main chat interface
-│   │   └── layout.tsx             # App layout and metadata
-│   │
-│   ├── 🎨 components/             # React components
-│   │   ├── auth/                  # Authentication components
-│   │   ├── enhanced-chat-*        # Modern streaming chat UI
-│   │   ├── thinking-display       # AI reasoning display
-│   │   └── ui/                    # Reusable UI components
-│   │
-│   ├── 🔧 lib/                    # Core utilities
-│   │   ├── supabase.ts            # Client-side Supabase
-│   │   ├── supabase-server.ts     # Server-side Supabase
-│   │   ├── database-supabase.ts   # Database operations
-│   │   ├── embeddings.ts          # OpenAI embedding service
-│   │   └── semantic-search.ts     # Vector similarity search
-│   │
-│   ├── 📊 hooks/                  # React hooks
-│   │   └── useSupabaseChat.ts     # Chat functionality
-│   │
-│   ├── 🔒 middleware.ts           # Auth middleware
-│   └── 📝 types/                  # TypeScript definitions
-│
-├── 🗄️ supabase/                   # Database schema
-│   └── migrations/                # SQL migration files
-│
-├── 📦 scripts/                    # Utility scripts
-│   └── migrate-to-supabase.ts     # Data migration tool
-│
-└── 🐳 dumps/                      # SQL dump files (for migration)
+└── src/
+    ├── 🌐 app/                     # Next.js app router
+    │   ├── api/                    # API routes
+    │   │   ├── health/             # Health check endpoint
+    │   │   └── chat/               # Streaming chat API
+    │   ├── auth/                   # Authentication pages
+    │   ├── page.tsx               # Main chat interface
+    │   └── layout.tsx             # App layout and metadata
+    │
+    ├── 🎨 components/             # React components
+    │   ├── auth/                  # Authentication components
+    │   ├── enhanced-chat-*        # Modern streaming chat UI
+    │   ├── thinking-display       # AI reasoning display
+    │   └── ui/                    # Reusable UI components
+    │
+    ├── 🔧 lib/                    # Core utilities
+    │   ├── supabase.ts            # Client-side Supabase
+    │   ├── supabase-server.ts     # Server-side Supabase
+    │   ├── database-supabase.ts   # Database operations
+    │   ├── embeddings.ts          # OpenAI embedding service
+    │   └── types.ts               # Shared types
+    │
+    ├── 📊 hooks/                  # React hooks
+    │   └── useSupabaseChat.ts     # Chat functionality
+    │
+    ├── 🔒 middleware.ts           # Auth middleware
+    └── 📝 types/                  # TypeScript definitions
 ```
 
 ### 🔧 Available Commands
@@ -266,7 +254,6 @@ airassist/
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
-| `npm run migrate` | Import data to Supabase |
 | `npm run typecheck` | TypeScript validation |
 | `npm run lint` | Code quality checks |
 
@@ -305,7 +292,7 @@ Authorization: Bearer <supabase-jwt>
 | **Supabase connection fails** | Check URL and keys in environment variables |
 | **OpenAI API errors** | Verify `OPENAI_API_KEY` and account credits |
 | **Authentication not working** | Configure Google OAuth in Supabase dashboard |
-| **Migration script fails** | Ensure dumps/ directory contains SQL files |
+| **Build fails** | Check TypeScript errors with `npm run typecheck` |
 | **Streaming not working** | Check CORS and API route configuration |
 
 ### Debug Commands
@@ -315,9 +302,6 @@ curl http://localhost:3000/api/health
 
 # Test authentication
 curl -H "Authorization: Bearer <token>" http://localhost:3000/api/chat
-
-# Run migration with debug
-npm run migrate
 
 # Check TypeScript issues
 npm run typecheck
