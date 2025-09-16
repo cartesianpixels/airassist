@@ -1,5 +1,12 @@
 
-import { insertKnowledgeBaseItem, type KnowledgeBaseItem } from "../lib/database";
+import * as dotenv from 'dotenv';
+import * as crypto from 'crypto';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+import { insertKnowledgeBaseItem, type KnowledgeBaseItem } from "../lib/database-pg";
+import { getEmbedding } from "../lib/embeddings";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -40,7 +47,7 @@ function transformData(data: any, fileName: string): KnowledgeBaseItem[] {
         const paragraph = paragraphMatch ? paragraphMatch[0] : '';
 
         return {
-            id: chunk.id,
+            id: crypto.randomUUID(),
             content: chunk.text,
             display_name: `${data.document} - Page ${chunk.page_number}`,
             summary: summary,
@@ -66,8 +73,57 @@ function transformData(data: any, fileName: string): KnowledgeBaseItem[] {
 
 
 async function seedDatabase() {
-    const dataDir = path.join(process.cwd(), 'src', 'data');
+    // Check both locations: data/ and src/data/
+    const dataDirs = [
+        path.join(process.cwd(), 'data'),
+        path.join(process.cwd(), 'src', 'data')
+    ];
+    
+    let dataDir = '';
     let allDocuments: any[] = [];
+
+    // Find which directory exists and has JSON files
+    for (const dir of dataDirs) {
+        if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir).filter(file => file.endsWith('.json'));
+            if (files.length > 0) {
+                dataDir = dir;
+                console.log(`Found knowledge base files in: ${dataDir}`);
+                break;
+            }
+        }
+    }
+
+    if (!dataDir) {
+        console.log("No JSON knowledge base files found in data/ or src/data/ directories.");
+        console.log("Creating sample data structure...");
+        
+        // Create sample data directory and file
+        const sampleDir = path.join(process.cwd(), 'data');
+        if (!fs.existsSync(sampleDir)) {
+            fs.mkdirSync(sampleDir, { recursive: true });
+        }
+        
+        const sampleData = {
+            document: "Sample ATC Procedures",
+            chunks: [
+                {
+                    id: "sample-1",
+                    text: "Standard separation between IFR aircraft in controlled airspace is 3 nautical miles laterally or 1000 feet vertically. This ensures safe operation of aircraft under instrument flight rules.",
+                    page_number: 1
+                },
+                {
+                    id: "sample-2", 
+                    text: "Visual approach clearance may be issued when the pilot reports the airport or preceding aircraft in sight and weather conditions are at or above basic VFR minimums.",
+                    page_number: 2
+                }
+            ]
+        };
+        
+        fs.writeFileSync(path.join(sampleDir, 'sample-atc-procedures.json'), JSON.stringify(sampleData, null, 2));
+        console.log("Created sample data file: data/sample-atc-procedures.json");
+        dataDir = sampleDir;
+    }
 
     try {
         const files = fs.readdirSync(dataDir).filter(file => file.endsWith('.json'));
@@ -102,19 +158,47 @@ async function seedDatabase() {
     }
     
     try {
-        // Create data directory if it doesn't exist
-        const dataDir = path.join(process.cwd(), 'data');
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
+        console.log(`Processing ${allDocuments.length} documents with embeddings...`);
+        
+        // Process documents in batches to avoid API limits
+        const batchSize = 5;
+        for (let i = 0; i < allDocuments.length; i += batchSize) {
+            const batch = allDocuments.slice(i, i + batchSize);
+            console.log(`Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(allDocuments.length/batchSize)}`);
+            
+            for (const item of batch) {
+                try {
+                    // Generate embedding for the content
+                    const embedding = await getEmbedding(item.content);
+                    const itemWithEmbedding = { ...item, embedding };
+                    
+                    await insertKnowledgeBaseItem(itemWithEmbedding);
+                    console.log(`✓ Processed: ${item.display_name}`);
+                } catch (error: any) {
+                    console.error(`✗ Failed to process ${item.display_name}:`, error.message);
+                    // Insert without embedding as fallback
+                    await insertKnowledgeBaseItem(item);
+                }
+            }
+            
+            // Small delay between batches
+            if (i + batchSize < allDocuments.length) {
+                console.log('Waiting 1 second between batches...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
 
-        allDocuments.forEach((item: KnowledgeBaseItem) => {
-            insertKnowledgeBaseItem(item);
-        });
-
-        console.log(`Database seeded successfully with ${allDocuments.length} total documents!`);
+        console.log(`🎉 Database seeded successfully with ${allDocuments.length} total documents!`);
+        console.log('📊 Next steps:');
+        console.log('  1. Start the development server: npm run dev');
+        console.log('  2. Test the application: http://localhost:3000');
+        console.log('  3. Deploy to Fly.io: ./deploy-fly.sh');
     } catch (error: any) {
-        console.error("Error seeding database: ", error.message);
+        console.error("❌ Error seeding database:", error.message);
+        console.log("🔧 Troubleshooting:");
+        console.log("  1. Make sure PostgreSQL is running");
+        console.log("  2. Check your DATABASE_URL environment variable");
+        console.log("  3. Verify your OpenAI API key for embeddings");
     }
 }
 

@@ -1,13 +1,19 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Production optimizations
+  output: 'standalone',
+  poweredByHeader: false,
+  
+  // Build configuration
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
+  
+  // Image optimization
   images: {
     remotePatterns: [
       {
@@ -23,6 +29,47 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    formats: ['image/webp', 'image/avif'],
+  },
+  
+  // Performance optimizations
+  serverExternalPackages: ['pg', 'ioredis', '@qdrant/js-client-rest'],
+  
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
+  
+  // Compression and caching
+  async rewrites() {
+    return [
+      {
+        source: '/health',
+        destination: '/api/health',
+      },
+    ];
   },
 };
 

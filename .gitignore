@@ -37,9 +37,36 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# AI & Database
 .genkit/*
 .env*
+!.env.example
+!.env.fly.example
+data/knowledge.db*
+*.sql
 
-# firebase
+# Docker & Deployment
+.dockerignore.fly
+fly-secrets-backup-*.txt
+
+# Database dumps (include in git but exclude large files)
+!dumps/
+dumps/*.sql
+dumps/*.txt
+!dumps/README.md
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+
+# firebase (legacy)
 firebase-debug.log
 firestore-debug.log

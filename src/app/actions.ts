@@ -3,7 +3,7 @@
 import { atcAssistantFlowWrapper } from "@/ai/assistant";
 import type { Message } from '@/lib/types';
 import { suggestResource } from "@/ai/flows/resource-suggestion";
-import { getAllKnowledgeBase } from "@/lib/database";
+import { getAllKnowledgeBase } from "@/lib/database-pg";
 
 // A simple in-memory store for feedback. In a real app, use a database.
 const feedbackStore = {

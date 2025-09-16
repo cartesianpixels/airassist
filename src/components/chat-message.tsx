@@ -1,107 +1,179 @@
 "use client";
 
+import React from "react";
+import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bot, User, ThumbsUp, ThumbsDown, Link as LinkIcon, Clipboard } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Copy, ThumbsUp, ThumbsDown, User, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { submitFeedback } from "@/app/actions";
 import type { Message } from "@/lib/types";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
   message: Message;
+  isStreaming?: boolean;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
-  const { toast } = useToast();
-  const isAssistant = message.role === "assistant";
+// Streaming text component with typewriter effect
+const StreamingText: React.FC<{ content: string; isComplete: boolean }> = ({
+  content,
+  isComplete,
+}) => {
+  const [displayedContent, setDisplayedContent] = React.useState("");
+  const [currentIndex, setCurrentIndex] = React.useState(0);
 
-  const handleFeedback = async (type: "positive" | "negative") => {
-    const { message } = await submitFeedback(type);
-    toast({
-      title: "Feedback Submitted",
-      description: message,
-      variant: type === 'positive' ? 'default' : 'destructive',
-    });
-  };
+  React.useEffect(() => {
+    if (currentIndex < content.length) {
+      const timer = setTimeout(() => {
+        setDisplayedContent(content.slice(0, currentIndex + 1));
+        setCurrentIndex(currentIndex + 1);
+      }, 20); // Adjust speed as needed
+      return () => clearTimeout(timer);
+    }
+  }, [content, currentIndex]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
-    toast({
-      title: "Copied to Clipboard",
-      description: "The assistant's response has been copied.",
-    });
-  };
-
+  React.useEffect(() => {
+    if (content.length < displayedContent.length || content !== displayedContent.slice(0, content.length)) {
+      setDisplayedContent(content);
+      setCurrentIndex(content.length);
+    }
+  }, [content, displayedContent]);
 
   return (
-    <div className={`flex items-start gap-4 ${isAssistant ? "" : "justify-end"}`}>
-      {isAssistant && (
-        <Avatar className="h-9 w-9 border border-border">
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            <Bot className="h-5 w-5" />
-          </AvatarFallback>
-        </Avatar>
-      )}
-      <div className={`flex flex-col gap-2 max-w-[85%] ${isAssistant ? "" : "items-end"}`}>
-        <div className={`rounded-lg p-4 ${isAssistant ? "bg-card" : "bg-primary text-primary-foreground"}`}>
-          {isAssistant ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {message.content}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <p className="whitespace-pre-wrap">{message.content}</p>
-          )}
-        </div>
-
-        {isAssistant && message.resources && message.resources.length > 0 && (
-          <div className="w-full">
-            <h3 className="text-sm font-semibold mb-2">Suggested Resources</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {message.resources.map((resource, index) => (
-                <Card key={index} className="bg-background/80 hover:bg-muted transition-colors">
-                  <CardHeader className="p-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <LinkIcon className="w-4 h-4 text-primary" />
-                      <a href={resource.link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        {resource.title}
-                      </a>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0 text-xs text-muted-foreground">
-                    {resource.summary}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {isAssistant && (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy}>
-              <Clipboard className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFeedback("positive")}>
-              <ThumbsUp className="w-4 h-4 text-green-500" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleFeedback("negative")}>
-              <ThumbsDown className="w-4 h-4 text-red-500" />
-            </Button>
-          </div>
-        )}
-      </div>
-      {!isAssistant && (
-        <Avatar className="h-9 w-9 border border-border">
-          <AvatarFallback className="bg-muted">
-            <User className="h-5 w-5" />
-          </AvatarFallback>
-        </Avatar>
+    <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {displayedContent}
+      </ReactMarkdown>
+      {!isComplete && (
+        <motion.span
+          animate={{ opacity: [1, 0, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+          className="inline-block w-2 h-5 bg-emerald-500 ml-1"
+        />
       )}
     </div>
+  );
+};
+
+export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) {
+  const { toast } = useToast();
+  const isUser = message.role === "user";
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast({
+        description: "Message copied to clipboard",
+        duration: 2000,
+      });
+    } catch (error) {
+      toast({
+        description: "Failed to copy message",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleFeedback = (type: "positive" | "negative") => {
+    toast({
+      description: `Thank you for your ${type} feedback!`,
+      duration: 2000,
+    });
+  };
+
+  if (isUser) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex justify-end mb-6"
+      >
+        <div className="flex items-start gap-3 max-w-2xl">
+          <div className="bg-gradient-to-br from-emerald-500 to-cyan-500 text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-lg">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          </div>
+          <Avatar className="w-8 h-8 border-2 border-slate-200 dark:border-slate-700">
+            <AvatarFallback className="bg-slate-100 dark:bg-slate-800">
+              <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex justify-start mb-6"
+    >
+      <div className="flex items-start gap-3 max-w-4xl">
+        <Avatar className="w-8 h-8 border-2 border-emerald-200 dark:border-emerald-800">
+          <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500">
+            <Sparkles className="w-4 h-4 text-white" />
+          </AvatarFallback>
+        </Avatar>
+
+        <div className="flex-1">
+          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl rounded-tl-md border border-slate-200/60 dark:border-slate-700/60 shadow-lg overflow-hidden">
+            <div className="px-4 py-3">
+              {isStreaming ? (
+                <StreamingText content={message.content} isComplete={false} />
+              ) : (
+                <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            {!isStreaming && message.content && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-1 px-4 py-2 border-t border-slate-200/60 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/50"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="h-8 px-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFeedback("positive")}
+                  className="h-8 px-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                >
+                  <ThumbsUp className="w-3 h-3 mr-1" />
+                  Good
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFeedback("negative")}
+                  className="h-8 px-2 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                >
+                  <ThumbsDown className="w-3 h-3 mr-1" />
+                  Bad
+                </Button>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
