@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AirAssist](https://img.shields.io/badge/AirAssist-v3.0.0-blue?style=for-the-badge)
+![AirAssist](https://img.shields.io/badge/AirAssist-v3.1.0-blue?style=for-the-badge)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15.x-black?style=for-the-badge&logo=next.js&logoColor=white)
@@ -52,29 +52,29 @@ npm run dev
 ## ✨ Features
 
 ### 🤖 AI-Powered Intelligence
-- **OpenAI GPT-4** - Latest OpenAI model for accurate ATC guidance
-- **Real-time Streaming** - Watch AI responses generate live with thinking process
-- **Semantic Search** - Vector-based search using Supabase pgvector for precise answers
-- **Smart Context Management** - Intelligent conversation history and knowledge retrieval
+- **OpenAI GPT-4** - Latest OpenAI models (GPT-4o, GPT-4o-mini) for accurate ATC guidance
+- **Real-time Streaming** - Server-sent events for live response generation
+- **Smart Auto-naming** - Automatic chat session naming based on conversation content
+- **Multi-tier Access** - Different model access based on user subscription tier
 
 ### 🏗️ Modern Cloud Architecture
-- **Supabase Backend** - Serverless PostgreSQL with built-in authentication
+- **Supabase Backend** - Serverless PostgreSQL with Row Level Security (RLS)
 - **Vercel Deployment** - Edge deployment with automatic scaling
-- **Vector Search** - pgvector extension for semantic knowledge retrieval
+- **Centralized State** - Optimized AuthProvider with profile management
 - **Real-time Streaming** - Server-sent events for responsive chat experience
 
 ### 🎨 Enhanced User Experience
-- **Streaming Chat Interface** - See responses as they're generated
-- **Thinking Display** - Shows AI reasoning process while working
-- **Beautiful UI/UX** - Modern design with gradients, animations, and micro-interactions
+- **Streaming Chat Interface** - Real-time response generation with live updates
+- **Modern Sidebar** - Collapsible chat history with search and management
+- **Dashboard Analytics** - Usage metrics and session overview
 - **Authentication** - Google OAuth integration via Supabase Auth
-- **Chat Sessions** - Persistent conversations with smart session management
+- **Session Management** - Persistent conversations with auto-naming and organization
 
 ### 🔒 Security & Performance
-- **Row Level Security** - Supabase RLS for data isolation
-- **Environment Security** - Secure secret management
-- **Edge Computing** - Fast response times worldwide
-- **Auto-scaling** - Handles traffic spikes automatically
+- **Row Level Security** - Supabase RLS for complete data isolation
+- **Rate Limiting** - Built-in middleware for API protection
+- **Optimized Auth** - Stable authentication without infinite loops
+- **Error Handling** - Comprehensive TypeScript error management
 
 ---
 
@@ -130,14 +130,14 @@ graph TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Frontend** | Next.js 15 + React | Server-side rendering, App Router |
-| **UI/UX** | Tailwind CSS + Radix UI | Modern, accessible components |
-| **Database** | Supabase (PostgreSQL + pgvector) | Vector storage, authentication |
-| **Authentication** | Supabase Auth + Google OAuth | Secure user management |
-| **AI** | OpenAI GPT-4 | Main conversation AI |
-| **Embeddings** | OpenAI text-embedding-ada-002 | Text vectorization |
-| **Deployment** | Vercel | Edge deployment platform |
-| **Real-time** | Server-Sent Events | Streaming responses |
+| **Frontend** | Next.js 15 + React + TypeScript | Server-side rendering, App Router |
+| **UI/UX** | Tailwind CSS + Radix UI + Framer Motion | Modern, accessible, animated components |
+| **Database** | Supabase (PostgreSQL + RLS) | Secure data storage with user isolation |
+| **Authentication** | Supabase Auth + Google OAuth | Centralized profile management |
+| **AI** | OpenAI GPT-4o/4o-mini + Streaming | Multi-tier conversation AI |
+| **State Management** | React Hooks + Optimized Context | Stable authentication and data flow |
+| **Deployment** | Vercel Edge Functions | Global edge deployment |
+| **Real-time** | Server-Sent Events | Live streaming responses |
 
 ---
 
@@ -212,39 +212,50 @@ npm run dev
 ### 📂 Project Structure
 ```
 airassist/
-├── 📝 README.md                    # This file
-├── 🔧 vercel.json                 # Vercel configuration
-├── 📦 package.json                # Dependencies
+├── 📝 README.md                    # Project documentation
+├── 🔧 vercel.json                 # Vercel deployment config
+├── 📦 package.json                # Dependencies and scripts
 ├── ⚡ next.config.ts              # Next.js configuration
 ├── 🎨 tailwind.config.ts          # Tailwind CSS config
+├── 🖼️ public/                     # Static assets
+│   ├── favicon.svg                # Sparkles brand favicon
+│   └── manifest.json              # PWA manifest
 │
 └── src/
     ├── 🌐 app/                     # Next.js app router
     │   ├── api/                    # API routes
-    │   │   ├── health/             # Health check endpoint
-    │   │   └── chat/               # Streaming chat API
+    │   │   ├── auth/               # Authentication endpoints
+    │   │   ├── chat/               # Streaming chat API
+    │   │   └── analytics/          # Usage analytics
     │   ├── auth/                   # Authentication pages
-    │   ├── page.tsx               # Main chat interface
-    │   └── layout.tsx             # App layout and metadata
+    │   ├── chat/[sessionId]/       # Dynamic chat sessions
+    │   ├── dashboard/              # User analytics dashboard
+    │   ├── onboarding/             # User onboarding flow
+    │   ├── page.tsx               # Landing page
+    │   └── layout.tsx             # App layout with PWA support
     │
     ├── 🎨 components/             # React components
-    │   ├── auth/                  # Authentication components
-    │   ├── enhanced-chat-*        # Modern streaming chat UI
-    │   ├── thinking-display       # AI reasoning display
+    │   ├── auth/                  # AuthProvider + auth components
+    │   ├── modern-sidebar.tsx     # Collapsible chat sidebar
+    │   ├── chat-message.tsx       # Message display component
+    │   ├── chat-form.tsx          # Message input form
+    │   ├── app-header.tsx         # Navigation header
     │   └── ui/                    # Reusable UI components
     │
     ├── 🔧 lib/                    # Core utilities
-    │   ├── supabase.ts            # Client-side Supabase
+    │   ├── supabase-typed.ts      # Typed Supabase client
     │   ├── supabase-server.ts     # Server-side Supabase
     │   ├── database-supabase.ts   # Database operations
-    │   ├── embeddings.ts          # OpenAI embedding service
-    │   └── types.ts               # Shared types
+    │   ├── chat-naming.ts         # Auto-naming functionality
+    │   └── server-profile.ts      # Server-side profile management
     │
     ├── 📊 hooks/                  # React hooks
-    │   └── useSupabaseChat.ts     # Chat functionality
+    │   ├── useSupabaseChat.ts     # Chat session management
+    │   └── use-openai-chat.ts     # Streaming chat integration
     │
-    ├── 🔒 middleware.ts           # Auth middleware
+    ├── 🔒 middleware.ts           # Rate limiting + CORS
     └── 📝 types/                  # TypeScript definitions
+        └── database.ts            # Generated Supabase types
 ```
 
 ### 🔧 Available Commands
@@ -256,6 +267,33 @@ airassist/
 | `npm run start` | Start production server |
 | `npm run typecheck` | TypeScript validation |
 | `npm run lint` | Code quality checks |
+
+---
+
+## 📋 Recent Updates (v3.1.0)
+
+### 🔧 Performance & Stability
+- **Fixed AuthProvider infinite loop** - Stabilized authentication with proper dependency management
+- **Optimized streaming chat** - Implemented proper OpenAI streaming with Server-Sent Events
+- **Enhanced error handling** - Comprehensive TypeScript error management throughout
+- **Improved state management** - Centralized profile management for better performance
+
+### ✨ New Features
+- **Modern sidebar** - Collapsible chat history with search and session management
+- **Dashboard analytics** - User metrics and session overview with usage tracking
+- **Auto-naming** - Intelligent chat session naming based on conversation content
+- **Multi-tier access** - Different OpenAI model access based on user subscription
+
+### 🔒 Security Improvements
+- **Rate limiting middleware** - Built-in API protection with configurable limits
+- **Enhanced RLS** - Improved Row Level Security policies for data isolation
+- **Secure error handling** - Safe error messages without sensitive data exposure
+
+### 🎨 UI/UX Enhancements
+- **Real-time streaming** - Live response generation with proper message updates
+- **Static favicon** - Optimized Sparkles brand icon to prevent excessive re-renders
+- **PWA support** - Progressive Web App manifest for mobile installation
+- **Responsive design** - Improved mobile and desktop experience
 
 ---
 
