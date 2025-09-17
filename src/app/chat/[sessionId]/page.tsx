@@ -13,7 +13,7 @@ import { ModernSidebar } from "@/components/modern-sidebar";
 import type { Message } from "@/lib/types";
 import { useOpenAIChat } from "@/hooks/use-openai-chat";
 import { useSupabaseChat } from "@/hooks/useSupabaseChat";
-import { useChatNaming, getGenericPromptTitle, shouldAutoNameChat } from "@/hooks/useChatNaming";
+import { generateChatTitle, renameChat, shouldAutoNameChat, getGenericPromptTitle } from "@/lib/chat-naming";
 import { Sparkles, Send, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ function ChatSessionPage() {
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   // Chat naming functionality
-  const { autoNameChat } = useChatNaming();
+  const [isNaming, setIsNaming] = React.useState(false);
 
   // Supabase chat integration
   const {
@@ -201,12 +201,15 @@ function ChatSessionPage() {
       if (shouldAutoNameChat(updatedMessages)) {
         console.log('Auto-naming chat after', updatedMessages.length, 'messages');
         try {
-          const result = await autoNameChat(currentSessionId, updatedMessages);
+          setIsNaming(true);
+          const result = await generateChatTitle(currentSessionId, updatedMessages);
           if (result.success && result.title) {
             console.log('Chat auto-named:', result.title);
           }
         } catch (error) {
           console.error('Error auto-naming chat:', error);
+        } finally {
+          setIsNaming(false);
         }
       }
     } catch (error) {

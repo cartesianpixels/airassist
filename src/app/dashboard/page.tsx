@@ -11,6 +11,7 @@ import { Sparkles, MessageSquare, Clock, TrendingUp, Settings, BarChart3 } from 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSupabaseChat } from "@/hooks/useSupabaseChat";
+import type { Profile } from "@/lib/supabase-typed";
 
 // Helper function to generate personalized questions based on user profile
 function getPersonalizedQuestions(metadata: any) {
@@ -136,73 +137,30 @@ function getPersonalizedQuestions(metadata: any) {
 }
 
 function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile, profileLoading } = useAuth();
   const router = useRouter();
   const { sessions, loadChatSessions } = useSupabaseChat();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [userProfile, setUserProfile] = React.useState<any>(null);
   const [isNewUser, setIsNewUser] = React.useState(false);
 
   React.useEffect(() => {
     if (user) {
       loadChatSessions();
-      fetchUserProfile();
     }
   }, [user, loadChatSessions]);
 
-  const fetchUserProfile = async () => {
-    try {
-      const { createClient } = await import('@/lib/supabase');
-      const supabase = createClient();
-
-      // Use array query instead of single() to avoid errors for new users
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id);
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-
-      // Handle new users without profiles
-      if (!profiles || profiles.length === 0) {
-        console.log('No profile found for user, creating default profile...');
-        setIsNewUser(true);
-
-        // Create a default profile for display while the trigger catches up
-        const defaultProfile = {
-          id: user?.id,
-          email: user?.email,
-          full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0],
-          avatar_url: user?.user_metadata?.avatar_url,
-          created_at: new Date().toISOString(),
-          onboarding_completed: false,
-          experience_level: null,
-          user_role: null,
-          interests: null
-        };
-        setUserProfile(defaultProfile);
-        return;
-      }
-
-      const profile = profiles[0];
-      setUserProfile(profile);
-
+  React.useEffect(() => {
+    if (profile && sessions.length !== undefined) {
       // Check if user just completed onboarding (created within last 24 hours and has no sessions)
       const accountAge = Date.now() - new Date(profile.created_at).getTime();
       const isNewAccount = accountAge < 24 * 60 * 60 * 1000; // 24 hours
       setIsNewUser(isNewAccount && sessions.length === 0);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      // Set as new user if there's any error
-      setIsNewUser(true);
     }
-  };
+  }, [profile, sessions]);
+
 
   // Show loading screen
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -322,14 +280,14 @@ function DashboardPage() {
                   {isNewUser ? 'Welcome to AirAssist,' : 'Welcome back,'}
                   <br />
                   <span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-                    {userProfile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]}
+                    {profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0]}
                   </span>
                   {isNewUser && '! 🎉'}
                 </h1>
 
                 <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
                   {isNewUser
-                    ? `Great job completing the onboarding! As a ${userProfile?.metadata?.role || 'student'} with ${userProfile?.metadata?.experience || 'beginner'} experience, you're ready to start your aviation learning journey.`
+                    ? `Great job completing the onboarding! As a ${profile?.metadata?.role || 'student'} with ${profile?.metadata?.experience || 'beginner'} experience, you're ready to start your aviation learning journey.`
                     : 'Ready to practice ATC procedures? Start a new conversation or continue from where you left off.'
                   }
                 </p>

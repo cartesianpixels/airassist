@@ -1,308 +1,107 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import OpenAI from 'openai';
-import { z } from 'zod';
-import { supabaseSemanticSearch } from '@/lib/database-supabase';
-import { createClient } from '@/lib/supabase-server';
-import { 
-  estimateMessagesTokenCount, 
-  calculateCost, 
-  extractTokenUsageFromResponse,
-  StreamingTokenTracker,
-  validateTokenLimits,
-  getOptimalModel,
-  type TokenUsage 
-} from '@/lib/token-counter';
-import { analytics, checkRateLimit, trackApiCall } from '@/lib/analytics';
-
-const MessageSchema = z.object({
-  role: z.enum(['user', 'assistant', 'system']),
-  content: z.string()
-});
-
-const RequestSchema = z.object({
-  messages: z.array(MessageSchema),
-  model: z.string().optional(),
-  sessionId: z.string().optional(),
-  maxTokens: z.number().optional(),
-});
+import type { Database } from '@/types/database';
+import type { ApiUsageLogInsert } from '@/lib/supabase-typed';
+import { getUserTier } from '@/lib/server-profile';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-async function getRelevantKnowledge(query: string, userId?: string) {
+export async function POST(request: NextRequest) {
   try {
-    console.log(`Searching Supabase knowledge for: "${query.substring(0, 100)}"`);
+    const body = await request.json();
+    const { messages, sessionId, model = 'gpt-4o-mini' } = body;
 
-    const results = await supabaseSemanticSearch(query, {
-      limit: 5, // Reduced from 10
-      threshold: 0.6 // Increased threshold for better relevance
-    }, userId);
-
-    console.log(`Found ${results.length} relevant documents`);
-
-    if (results.length === 0) {
-      return "No specific information found in knowledge base.";
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'Messages array is required' },
+        { status: 400 }
+      );
     }
 
-    // Truncate content to prevent context overflow
-    return results.map(result => {
-      const truncatedText = result.text.length > 500
-        ? result.text.substring(0, 500) + "..."
-        : result.text;
-
-      return `Title: ${result.metadata.title || 'Unknown'}
-Content: ${truncatedText}
----`;
-    }).join('\n');
-  } catch (error) {
-    console.error('Supabase knowledge search error:', error);
-    return "Error searching knowledge base.";
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const requestId = Math.random().toString(36).substring(7);
-  const startTime = Date.now();
-  console.log(`[${requestId}] Starting OpenAI chat request`);
-
-  try {
-    // Get user from Supabase auth
-    const supabase = await createClient();
+    // Use client-side Supabase (secure with RLS policies)
+    const supabase = createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error(`[${requestId}] Authentication error:`, authError);
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Check rate limiting
-    const rateLimitCheck = await checkRateLimit(user.id);
-    if (!rateLimitCheck.allowed) {
-      console.log(`[${requestId}] Rate limit exceeded for user ${user.id}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          remaining: rateLimitCheck.remaining,
-          resetTime: rateLimitCheck.resetTime,
-        }),
-        {
-          status: 429,
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-RateLimit-Remaining': rateLimitCheck.remaining.toString(),
-            'X-RateLimit-Reset': rateLimitCheck.resetTime,
-          }
-        }
-      );
-    }
+    // Get user's tier for model validation
+    const userTier = await getUserTier(user.id);
 
-    const body = await request.json();
-    const { messages, model: requestedModel, sessionId, maxTokens = 1500 } = RequestSchema.parse(body);
-
-    console.log(`[${requestId}] Processing ${messages.length} messages for user ${user.id}`);
-
-    // Get user profile to determine tier and preferences
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tier, role')
-      .eq('id', user.id)
-      .single();
-
-    const userTier = profile?.tier || 'free';
-
-    // Estimate token count for input
-    const estimatedInputTokens = estimateMessagesTokenCount(messages);
-    
-    // Determine optimal model
-    const modelToUse = requestedModel || getOptimalModel(estimatedInputTokens, userTier, 'medium');
-    
-    // Validate token limits
-    const validation = validateTokenLimits(estimatedInputTokens, modelToUse, maxTokens);
-    if (!validation.valid) {
-      console.log(`[${requestId}] Token limit validation failed: ${validation.reason}`);
-      return new Response(
-        JSON.stringify({ error: validation.reason }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    console.log(`[${requestId}] Using model: ${modelToUse}, estimated input tokens: ${estimatedInputTokens}`);
-
-    const lastMessage = messages[messages.length - 1]?.content || '';
-
-    // Get relevant knowledge with user context
-    const knowledge = await getRelevantKnowledge(lastMessage, user.id);
-
-    // System prompt
-    const systemMessage = {
-      role: 'system' as const,
-      content: `You are an expert Air Traffic Control assistant. Answer questions using the provided knowledge base.
-
-Guidelines:
-- Provide clear, helpful answers about aviation procedures and regulations
-- Reference source documents when citing specific rules
-- Use conversational tone
-- If you can't find the answer, say so honestly
-
-Knowledge Base:
-${knowledge}
-
-Answer the user's question based on this knowledge.`
+    // Validate model access
+    const modelAccess: Record<string, string[]> = {
+      'gpt-4o-mini': ['free', 'basic', 'pro', 'enterprise'],
+      'gpt-4o': ['basic', 'pro', 'enterprise'],
+      'gpt-4': ['pro', 'enterprise'],
+      'gpt-3.5-turbo': ['free', 'basic', 'pro', 'enterprise'],
     };
 
-    // Truncate conversation history to prevent context overflow
-    // Keep only the last 4 messages (2 exchanges) plus system message
-    const truncatedMessages = messages.slice(-4);
+    if (!modelAccess[model]?.includes(userTier)) {
+      return NextResponse.json(
+        { error: `Model ${model} not available for ${userTier} tier` },
+        { status: 403 }
+      );
+    }
 
-    // Prepare messages for OpenAI
-    const openaiMessages = [systemMessage, ...truncatedMessages];
-
-    console.log(`[${requestId}] Calling OpenAI API...`);
-
-    // Initialize token tracker for streaming
-    const tokenTracker = new StreamingTokenTracker(estimatedInputTokens);
-    let totalContent = '';
-    let responseStartTime = Date.now();
-
-    const stream = await openai.chat.completions.create({
-      model: modelToUse,
-      messages: openaiMessages,
+    // Call OpenAI
+    const startTime = Date.now();
+    const completion = await openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens: 2000,
       temperature: 0.7,
-      max_tokens: maxTokens,
-      stream: true,
     });
 
-    console.log(`[${requestId}] OpenAI stream started`);
+    const responseTime = Date.now() - startTime;
+    const response = completion.choices[0]?.message?.content || '';
+    const usage = completion.usage;
 
-    const encoder = new TextEncoder();
+    // Usage tracking will be handled client-side or via middleware
 
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-              totalContent += content;
-              tokenTracker.addContent(content);
-              
-              const data = `data: ${JSON.stringify(chunk)}\n\n`;
-              controller.enqueue(encoder.encode(data));
-            }
-          }
-
-          // Calculate final metrics
-          const responseTime = Date.now() - responseStartTime;
-          const finalTokenUsage = tokenTracker.getUsage();
-          const finalCost = tokenTracker.getCost(modelToUse);
-
-          console.log(`[${requestId}] Stream completed - Tokens: ${finalTokenUsage.totalTokens}, Cost: $${finalCost.totalCost.toFixed(6)}, Time: ${responseTime}ms`);
-
-          // Track analytics and usage (async, don't block response)
-          Promise.all([
-            // Track API usage
-            trackApiCall(
-              user.id,
-              '/api/chat',
-              startTime,
-              {
-                prompt: finalTokenUsage.promptTokens,
-                completion: finalTokenUsage.completionTokens,
-                total: finalTokenUsage.totalTokens,
-              },
-              finalCost.totalCost,
-              modelToUse,
-              undefined,
-              sessionId
-            ),
-            // Track response received event
-            analytics.trackResponseReceived(user.id, sessionId || 'unknown', {
-              model: modelToUse,
-              tokenCount: finalTokenUsage.totalTokens,
-              responseTime,
-              cost: finalCost.totalCost,
-            }),
-            // Increment daily usage
-            analytics.incrementDailyUsage(user.id),
-          ]).catch(error => {
-            console.error(`[${requestId}] Error tracking analytics:`, error);
-          });
-
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
-        } catch (error) {
-          console.error(`[${requestId}] Stream error:`, error);
-          
-          // Track error
-          trackApiCall(
-            user.id,
-            '/api/chat',
-            startTime,
-            undefined,
-            undefined,
-            modelToUse,
-            error instanceof Error ? error.message : 'Unknown error',
-            sessionId
-          ).catch(console.error);
-          
-          controller.error(error);
-        }
-      }
-    });
-
-    return new Response(readableStream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'X-Model-Used': modelToUse,
-        'X-Estimated-Tokens': estimatedInputTokens.toString(),
-        'X-RateLimit-Remaining': rateLimitCheck.remaining.toString(),
-      },
+    return NextResponse.json({
+      response,
+      usage,
+      model,
+      responseTime,
     });
 
   } catch (error) {
-    console.error(`[${requestId}] API route error:`, error);
-    
-    // Track error in analytics (if user is available)
-    try {
-      // Re-get user from auth in case it wasn't available in outer scope
-      const { data: { user: errorUser } } = await createSupabaseServerClient().auth.getUser();
-      if (errorUser?.id) {
-        trackApiCall(
-          errorUser.id,
-          '/api/chat',
-          startTime,
-          undefined,
-          undefined,
-          undefined,
-          error instanceof Error ? error.message : 'Unknown error',
-          undefined // sessionId not available in this error case
-        ).catch(console.error);
+    console.error('Chat API error:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('insufficient_quota')) {
+        return NextResponse.json(
+          { error: 'OpenAI quota exceeded. Please try again later.' },
+          { status: 429 }
+        );
       }
-    } catch (analyticsError) {
-      console.error('Failed to track error analytics:', analyticsError);
+      if (error.message.includes('rate_limit_exceeded')) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please try again later.' },
+          { status: 429 }
+        );
+      }
     }
-    
-    return new Response(
-      JSON.stringify({
-        error: 'Request failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        requestId
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
+}
+
+function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
+  const pricing: Record<string, { input: number; output: number }> = {
+    'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+    'gpt-4o': { input: 0.005, output: 0.015 },
+    'gpt-4': { input: 0.03, output: 0.06 },
+    'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
+  };
+
+  const rates = pricing[model] || pricing['gpt-4o-mini'];
+  return ((promptTokens * rates.input) + (completionTokens * rates.output)) / 1000;
 }

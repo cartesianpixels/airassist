@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { getUserTier } from '@/lib/server-profile';
+import type { Database } from '@/types/database';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type ApiUsageLog = Database['public']['Tables']['api_usage_logs']['Row'];
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -11,28 +16,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's tier to determine available models
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tier')
-      .eq('id', user.id)
-      .single();
+    const userTier = await getUserTier(user.id);
 
-    const userTier = profile?.tier || 'free';
+    // For now, return hardcoded OpenAI models since we don't have model_configurations table
+    const availableModels = getAvailableModels(userTier);
 
-    // Get available model configurations for user's tier
-    const { data: models, error: modelsError } = await supabase
-      .from('model_configurations')
-      .select('*')
-      .filter('available_for_tiers', 'cs', `{${userTier}}`)
-      .eq('is_active', true)
-      .order('cost_per_1k_input_tokens', { ascending: true });
-
-    if (modelsError) {
-      console.error('Error fetching models:', modelsError);
-      return NextResponse.json({ error: 'Failed to fetch models' }, { status: 500 });
-    }
-
-    // Get user's usage statistics for each model
+    // Get user's usage statistics
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
     const startDate = new Date();
@@ -49,8 +38,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch usage statistics' }, { status: 500 });
     }
 
+    const usageLogs = usageStats as Pick<ApiUsageLog, 'model_used' | 'tokens_used' | 'cost' | 'response_time_ms' | 'created_at'>[] || [];
+
     // Aggregate usage statistics by model
-    const modelUsage = (usageStats || []).reduce((acc: any, log: any) => {
+    const modelUsage = usageLogs.reduce((acc: Record<string, any>, log) => {
       const model = log.model_used || 'unknown';
       if (!acc[model]) {
         acc[model] = {
@@ -67,7 +58,7 @@ export async function GET(request: NextRequest) {
       acc[model].totalTokens += log.tokens_used || 0;
       acc[model].totalCost += log.cost || 0;
       acc[model].averageResponseTime += log.response_time_ms || 0;
-      
+
       if (!acc[model].lastUsed || new Date(log.created_at) > new Date(acc[model].lastUsed)) {
         acc[model].lastUsed = log.created_at;
       }
@@ -85,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Combine model configurations with usage statistics
-    const modelsWithUsage = (models || []).map((model: any) => ({
+    const modelsWithUsage = availableModels.map((model) => ({
       ...model,
       usage: modelUsage[model.model_id] || {
         model: model.model_id,
@@ -113,6 +104,55 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function getAvailableModels(userTier: string) {
+  const baseModels = [
+    {
+      model_id: 'gpt-4o-mini',
+      name: 'GPT-4o Mini',
+      description: 'Optimized for speed and cost efficiency',
+      cost_per_1k_input_tokens: 0.00015,
+      cost_per_1k_output_tokens: 0.0006,
+      max_tokens: 128000,
+      is_active: true,
+      available_for_tiers: ['free', 'basic', 'pro', 'enterprise'],
+    },
+    {
+      model_id: 'gpt-4o',
+      name: 'GPT-4o',
+      description: 'Latest GPT-4 with enhanced capabilities',
+      cost_per_1k_input_tokens: 0.005,
+      cost_per_1k_output_tokens: 0.015,
+      max_tokens: 128000,
+      is_active: true,
+      available_for_tiers: ['basic', 'pro', 'enterprise'],
+    },
+    {
+      model_id: 'gpt-4',
+      name: 'GPT-4',
+      description: 'High-quality responses for complex tasks',
+      cost_per_1k_input_tokens: 0.03,
+      cost_per_1k_output_tokens: 0.06,
+      max_tokens: 8192,
+      is_active: true,
+      available_for_tiers: ['pro', 'enterprise'],
+    },
+    {
+      model_id: 'gpt-3.5-turbo',
+      name: 'GPT-3.5 Turbo',
+      description: 'Fast and efficient for general use',
+      cost_per_1k_input_tokens: 0.0005,
+      cost_per_1k_output_tokens: 0.0015,
+      max_tokens: 16385,
+      is_active: true,
+      available_for_tiers: ['free', 'basic', 'pro', 'enterprise'],
+    }
+  ];
+
+  return baseModels.filter(model =>
+    model.available_for_tiers.includes(userTier)
+  );
 }
 
 function getModelRecommendation(model: any, userTier: string): {
@@ -144,7 +184,7 @@ function getModelRecommendation(model: any, userTier: string): {
   if (model.model_id === 'gpt-3.5-turbo') {
     return {
       recommended: userTier === 'free',
-      reason: userTier === 'free' 
+      reason: userTier === 'free'
         ? 'Good option for simple queries on free tier'
         : 'Consider GPT-4o Mini for better quality',
     };

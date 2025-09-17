@@ -443,7 +443,7 @@ const CompletionStep = ({
 );
 
 export function OnboardingFlow() {
-  const { user } = useAuth();
+  const { user, updateProfile, refreshProfile } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = React.useState(0);
   const [profile, setProfile] = React.useState<UserProfile>({
@@ -505,24 +505,22 @@ export function OnboardingFlow() {
 
   const handleComplete = async () => {
     try {
-      // Save profile to database
-      const { createClient } = await import('@/lib/supabase');
-      const supabase = createClient();
+      // Save profile to database using AuthProvider
+      const success = await updateProfile({
+        full_name: profile.fullName,
+        avatar_url: null,
+        onboarding_completed: true,
+        metadata: {
+          role: profile.role,
+          experience: profile.experience,
+          interests: profile.interests,
+          preferences: profile.preferences
+        }
+      });
 
-      await supabase
-        .from('profiles')
-        .update({
-          full_name: profile.fullName,
-          avatar_url: null,
-          onboarding_completed: true,
-          metadata: {
-            role: profile.role,
-            experience: profile.experience,
-            interests: profile.interests,
-            preferences: profile.preferences
-          }
-        })
-        .eq('id', user?.id);
+      if (!success) {
+        throw new Error('Failed to update profile');
+      }
 
       // Track onboarding completion
       if (user?.id) {

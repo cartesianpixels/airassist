@@ -14,7 +14,6 @@ import {
   LogOut,
   User,
   Menu,
-  Shield,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
+// Admin functionality removed
 
 interface AppHeaderProps {
   title?: string;
@@ -43,7 +42,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { user } = useAuth();
   const router = useRouter();
-  const { isAdmin } = useAdminCheck();
+  // Admin functionality removed
 
   const handleLogout = async () => {
     // Add logout logic here
@@ -106,20 +105,7 @@ export function AppHeader({
 
         {/* Right: Actions + User Menu */}
         <div className="flex items-center gap-2">
-          {/* Admin Button - only show for admin users */}
-          {isAdmin && (
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateTo('/admin')}
-                className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-200/50 dark:border-red-700/50 hover:from-red-500/20 hover:to-orange-500/20 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-all duration-200"
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Admin
-              </Button>
-            </motion.div>
-          )}
+          {/* Admin functionality removed */}
 
           {/* Theme Switcher */}
           <ThemeSwitcher />

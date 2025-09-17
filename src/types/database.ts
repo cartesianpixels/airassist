@@ -8,7 +8,7 @@ export type Database = {
           full_name: string | null;
           avatar_url: string | null;
           tier: 'free' | 'basic' | 'pro' | 'enterprise' | null;
-          role: 'user' | 'moderator' | 'admin' | null;
+          role: 'user' | null;
           subscription_start: string | null;
           subscription_end: string | null;
           is_active: boolean | null;
@@ -26,7 +26,7 @@ export type Database = {
           full_name?: string | null;
           avatar_url?: string | null;
           tier?: 'free' | 'basic' | 'pro' | 'enterprise' | null;
-          role?: 'user' | 'moderator' | 'admin' | null;
+          role?: 'user' | null;
           subscription_start?: string | null;
           subscription_end?: string | null;
           is_active?: boolean | null;
@@ -44,7 +44,7 @@ export type Database = {
           full_name?: string | null;
           avatar_url?: string | null;
           tier?: 'free' | 'basic' | 'pro' | 'enterprise' | null;
-          role?: 'user' | 'moderator' | 'admin' | null;
+          role?: 'user' | null;
           subscription_start?: string | null;
           subscription_end?: string | null;
           is_active?: boolean | null;
@@ -162,7 +162,7 @@ export type Database = {
           id: string;
           user_id: string | null;
           session_id: string | null;
-          event_type: 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view';
+          event_type: 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view' | 'session_auto_named' | 'session_manually_renamed';
           event_data: any | null;
           ip_address: string | null;
           user_agent: string | null;
@@ -173,7 +173,7 @@ export type Database = {
           id?: string;
           user_id?: string | null;
           session_id?: string | null;
-          event_type: 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view';
+          event_type: 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view' | 'session_auto_named' | 'session_manually_renamed';
           event_data?: any | null;
           ip_address?: string | null;
           user_agent?: string | null;
@@ -373,11 +373,41 @@ export type Database = {
       };
     };
     Functions: {
-      [_ in never]: never;
+      semantic_search: {
+        Args: {
+          query_embedding: number[];
+          match_threshold: number;
+          match_count: number;
+          user_id: string | null;
+        };
+        Returns: {
+          id: string;
+          content: string;
+          metadata: any;
+          similarity: number;
+        }[];
+      };
+      get_user_analytics: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: {
+          total_users: number;
+          active_users: number;
+          total_sessions: number;
+          total_messages: number;
+          total_tokens: number;
+          total_cost: number;
+          avg_session_length_minutes: number;
+          avg_messages_per_session: number;
+          most_used_model: string;
+          error_rate: number;
+        }[];
+      };
     };
   };
 };
 
 export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
-export type UserRole = 'user' | 'moderator' | 'admin';
-export type AnalyticsEventType = 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view';
+export type UserRole = 'user';
+export type AnalyticsEventType = 'user_login' | 'user_logout' | 'session_started' | 'session_ended' | 'message_sent' | 'response_received' | 'api_call' | 'page_view' | 'session_auto_named' | 'session_manually_renamed';

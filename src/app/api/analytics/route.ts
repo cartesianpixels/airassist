@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient } from '@/lib/supabase';
 import { analytics } from '@/lib/analytics';
+import type { Database } from '@/types/database';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -26,26 +29,8 @@ export async function GET(request: NextRequest) {
         period: `${days} days`,
       });
     } else if (type === 'system') {
-      // Check if user is admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.role !== 'admin') {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-      }
-
-      // Get system-wide analytics
-      const systemAnalytics = await analytics.getSystemAnalytics(days);
-      const modelStats = await analytics.getModelUsageStats(days);
-
-      return NextResponse.json({
-        analytics: systemAnalytics,
-        modelStats,
-        period: `${days} days`,
-      });
+      // System analytics removed - admin functionality not available
+      return NextResponse.json({ error: 'System analytics not available' }, { status: 403 });
     }
 
     return NextResponse.json({ error: 'Invalid analytics type' }, { status: 400 });
@@ -60,7 +45,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

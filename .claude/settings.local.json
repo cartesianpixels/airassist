@@ -3,7 +3,8 @@
     "allow": [
       "Bash(findstr:*)",
       "Bash(npm install:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": [],
     "ask": []
