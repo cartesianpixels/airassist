@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   title: 'AirAssist - IVAO US Division',
   description: 'AI-powered training assistant for air traffic controllers',
   icons: {
-    icon: '/icon',
-    shortcut: '/icon',
-    apple: '/apple-icon',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 

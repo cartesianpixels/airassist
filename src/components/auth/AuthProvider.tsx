@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setProfileLoading(false);
     }
-  }, [supabase, user?.email, user?.user_metadata]);
+  }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
     if (!user?.id) return;
