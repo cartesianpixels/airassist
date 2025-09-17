@@ -87,7 +87,7 @@ export function ModernSidebar({
       onClose();
     } catch (error) {
       console.error('Error creating session:', error);
-      alert('Error creating chat session: ' + error.message);
+      alert('Error creating chat session: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
