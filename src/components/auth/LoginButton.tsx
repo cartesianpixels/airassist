@@ -20,12 +20,11 @@ export function LoginButton({ redirectTo = '/', className, children }: LoginButt
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
-          },
-          skipBrowserRedirect: false
+          }
         },
       });
 
