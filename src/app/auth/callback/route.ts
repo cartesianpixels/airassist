@@ -9,9 +9,17 @@ export async function GET(request: NextRequest) {
     const errorDescription = searchParams.get('error_description')
     const redirectTo = searchParams.get('redirectTo') || '/dashboard'
 
+    console.log('🔄 AUTH CALLBACK START:', {
+      url: request.url,
+      code: code ? `${code.substring(0, 8)}...` : null,
+      error,
+      errorDescription,
+      redirectTo
+    })
+
     // Handle OAuth provider errors
     if (error) {
-      console.error('OAuth error:', { error, errorDescription })
+      console.error('❌ OAuth error:', { error, errorDescription })
       const loginUrl = new URL('/auth/login', request.url)
       loginUrl.searchParams.set('error', error)
       loginUrl.searchParams.set('message', errorDescription || 'Authentication failed')
@@ -20,20 +28,22 @@ export async function GET(request: NextRequest) {
 
     // Handle missing authorization code
     if (!code) {
-      console.error('No authorization code provided')
+      console.error('❌ No authorization code provided')
       const loginUrl = new URL('/auth/login', request.url)
       loginUrl.searchParams.set('error', 'no_code')
       loginUrl.searchParams.set('message', 'No authorization code provided')
       return NextResponse.redirect(loginUrl)
     }
 
+    console.log('🔄 Creating server supabase client...')
     const supabase = await createServerSupabaseClient()
 
+    console.log('🔄 Exchanging code for session...')
     // Exchange code for session
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
     if (exchangeError) {
-      console.error('Error exchanging code for session:', {
+      console.error('❌ Error exchanging code for session:', {
         error: exchangeError.message,
         code: exchangeError.status,
         details: exchangeError
@@ -45,19 +55,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
+    console.log('✅ Code exchange successful:', {
+      hasSession: !!data.session,
+      hasUser: !!data.user,
+      userId: data.user?.id,
+      email: data.user?.email
+    })
+
     // Verify we have a valid session and user
     if (!data.session || !data.user) {
-      console.error('No session or user after code exchange:', { session: !!data.session, user: !!data.user })
+      console.error('❌ No session or user after code exchange:', { session: !!data.session, user: !!data.user })
       const loginUrl = new URL('/auth/login', request.url)
       loginUrl.searchParams.set('error', 'invalid_session')
       loginUrl.searchParams.set('message', 'Failed to create valid session')
       return NextResponse.redirect(loginUrl)
     }
 
-    console.log('Auth callback successful:', {
-      userId: data.user.id,
+    console.log('🎉 AUTH CALLBACK SUCCESSFUL - Redirecting to:', redirectTo)
+    console.log('👤 User details:', {
+      id: data.user.id,
       email: data.user.email,
-      redirectTo
+      metadata: data.user.user_metadata,
+      appMetadata: data.user.app_metadata
     })
 
     // Redirect to the intended destination

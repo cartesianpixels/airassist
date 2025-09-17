@@ -443,6 +443,7 @@ const CompletionStep = ({
 );
 
 export function OnboardingFlow() {
+  console.log('🎨 ONBOARDING FLOW COMPONENT RENDERING');
   const { user, updateProfile, refreshProfile } = useAuth();
   const router = useRouter();
   const [currentStep, setCurrentStep] = React.useState(0);

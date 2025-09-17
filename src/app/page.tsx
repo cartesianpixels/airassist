@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Sparkles, MessageSquare, BarChart3, Settings } from "lucide-react";
@@ -10,13 +10,22 @@ import { motion } from "framer-motion";
 function HomePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Redirect authenticated users to dashboard
+  // Handle OAuth callback on root URL
   React.useEffect(() => {
+    const code = searchParams.get('code');
+    if (code) {
+      console.log('OAuth code found on root URL, redirecting to callback');
+      router.replace(`/auth/callback?code=${code}`);
+      return;
+    }
+
+    // Redirect authenticated users to dashboard
     if (user) {
       router.replace('/dashboard');
     }
-  }, [user, router]);
+  }, [user, router, searchParams]);
 
   // Show loading screen
   if (loading) {

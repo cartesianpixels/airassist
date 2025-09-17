@@ -9,15 +9,24 @@ import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 function OnboardingPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasCompletedOnboarding } = useAuth();
   const router = useRouter();
+
+  console.log('🎬 ONBOARDING PAGE:', {
+    hasUser: !!user,
+    loading,
+    hasCompletedOnboarding,
+    userMetadata: user?.user_metadata
+  });
 
   // Check if user has already completed onboarding
   React.useEffect(() => {
-    if (user?.user_metadata?.onboarding_completed) {
+    console.log('🔄 Onboarding completion check:', { hasCompletedOnboarding });
+    if (hasCompletedOnboarding) {
+      console.log('✅ User has completed onboarding - redirecting to dashboard');
       router.replace('/dashboard');
     }
-  }, [user, router]);
+  }, [hasCompletedOnboarding, router]);
 
   // Show loading screen
   if (loading) {

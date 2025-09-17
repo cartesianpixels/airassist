@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadProfileForUser = async (userId: string) => {
       try {
+        console.log('🔄 LOADING PROFILE for user:', userId);
         setProfileLoading(true);
         const { data: profiles, error } = await supabase
           .from('profiles')
@@ -107,13 +108,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', userId);
 
         if (error) {
-          console.error('Error fetching profile:', error);
+          console.error('❌ Error fetching profile:', error);
           setProfileLoading(false);
           return null;
         }
 
+        console.log('📊 Profile query result:', {
+          found: profiles?.length || 0,
+          profiles: profiles?.map((p: any) => ({ id: p.id, email: p.email, onboarding: p.onboarding_completed }))
+        });
+
         if (!profiles || profiles.length === 0) {
-          console.log('No profile found, attempting to create one for user:', userId);
+          console.log('🆕 No profile found, attempting to create one for user:', userId);
 
           // Create profile using direct insert
           const defaultProfile: Partial<Profile> = {
@@ -138,24 +144,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (createError) {
-            console.error('Profile creation failed:', {
+            console.error('❌ Profile creation failed:', {
               code: createError.code,
               message: createError.message,
               hint: createError.hint,
               details: createError.details
             });
 
-            console.warn('Profile creation failed - user can complete setup later');
+            console.warn('⚠️ Profile creation failed - user can complete setup later');
             setProfileLoading(false);
             return null;
           }
 
-          console.log('Profile created via direct insert:', newProfile);
+          console.log('✅ Profile created via direct insert:', {
+            id: newProfile.id,
+            email: newProfile.email,
+            onboarding: newProfile.onboarding_completed
+          });
           setProfile(newProfile as Profile);
           setProfileLoading(false);
           return newProfile as Profile;
         }
 
+        console.log('✅ Found existing profile:', {
+          id: (profiles[0] as any).id,
+          email: (profiles[0] as any).email,
+          onboarding: (profiles[0] as any).onboarding_completed
+        });
         setProfile(profiles[0] as Profile);
         setProfileLoading(false);
         return profiles[0] as Profile;
@@ -166,7 +181,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    console.log('🚀 AuthProvider initializing...');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('📋 Initial session check:', {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      });
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -174,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user?.id) {
         await loadProfileForUser(session.user.id);
       } else {
+        console.log('👤 No user session found');
         setProfileLoading(false);
       }
     });
@@ -181,11 +203,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change:', {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      });
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
 
       if (event === 'SIGNED_IN' && session?.user?.id) {
+        console.log('✅ User signed in, loading profile...');
         const userProfile = await loadProfileForUser(session.user.id);
 
         if (userProfile) {
@@ -223,6 +252,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const userTier = profile?.tier || 'free';
+
+  // Debug logging for auth state
+  useEffect(() => {
+    console.log('🎯 AUTH STATE DEBUG:', {
+      loading,
+      profileLoading,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      hasCompletedOnboarding,
+      userTier,
+      profileData: profile ? {
+        id: profile.id,
+        email: profile.email,
+        onboarding_completed: profile.onboarding_completed,
+        metadata: profile.metadata
+      } : null
+    });
+  }, [loading, profileLoading, user, profile, hasCompletedOnboarding, userTier]);
 
   const value = {
     user,
