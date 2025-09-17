@@ -72,7 +72,33 @@ export class AnalyticsService {
         });
 
       if (error) {
-        console.error('Error tracking analytics event:', error);
+        // Check if it's a foreign key constraint error (profile doesn't exist yet)
+        if (error.code === '23503' && error.message.includes('analytics_events_user_id_fkey')) {
+          console.log('Profile not ready yet, will retry analytics tracking later');
+
+          // Try to track without user_id for now
+          const { error: retryError } = await this.supabase
+            .from('analytics_events')
+            .insert({
+              user_id: null, // Track anonymously until profile is ready
+              session_id: event.sessionId,
+              event_type: event.eventType,
+              event_data: {
+                ...event.eventData || {},
+                intended_user_id: event.userId, // Store for later reference
+                profile_missing: true
+              },
+              ip_address: event.ipAddress,
+              user_agent: event.userAgent,
+              referer: event.referer,
+            });
+
+          if (retryError) {
+            console.error('Failed to track analytics anonymously:', retryError);
+          }
+        } else {
+          console.error('Error tracking analytics event:', error);
+        }
       }
     } catch (error) {
       console.error('Analytics tracking error:', error);
@@ -456,12 +482,14 @@ export async function trackApiCall(
   tokenUsage?: { prompt: number; completion: number; total: number },
   cost?: number,
   model?: string,
-  error?: string
+  error?: string,
+  sessionId?: string
 ): Promise<void> {
   const responseTime = Date.now() - startTime;
-  
+
   await analytics.logApiUsage({
     userId,
+    sessionId,
     endpoint,
     responseTimeMs: responseTime,
     tokensUsed: tokenUsage?.total || 0,

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
   createChatSession,
@@ -9,6 +9,11 @@ import {
   deleteChatSession,
 } from '@/lib/database-supabase';
 import type { Message } from '@/lib/types';
+
+// Cache for sessions and messages to reduce database calls
+const sessionCache = new Map<string, { data: any[]; timestamp: number }>();
+const messageCache = new Map<string, { data: Message[]; timestamp: number }>();
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for chat data
 
 export interface ChatSession {
   id: string;
@@ -31,14 +36,27 @@ export function useSupabaseChat() {
   const loadChatSessions = useCallback(async (limit: number = 20, offset: number = 0, append: boolean = false) => {
     if (!user) return;
 
+    // Check cache first (only for initial load, not appends)
+    const cacheKey = `${user.id}_${limit}_${offset}`;
+    if (!append) {
+      const cached = sessionCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setSessions(cached.data);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
       const sessionsData = await getUserChatSessions(user.id, limit, offset);
+
       if (append) {
         setSessions(prev => [...prev, ...sessionsData]);
       } else {
         setSessions(sessionsData);
+        // Cache the result
+        sessionCache.set(cacheKey, { data: sessionsData, timestamp: Date.now() });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load chat sessions');
@@ -49,6 +67,14 @@ export function useSupabaseChat() {
 
   const loadChatMessages = useCallback(async (sessionId: string) => {
     if (!user) return;
+
+    // Check cache first
+    const cached = messageCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setMessages(cached.data);
+      setCurrentSessionId(sessionId);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -64,6 +90,9 @@ export function useSupabaseChat() {
 
       setMessages(formattedMessages);
       setCurrentSessionId(sessionId);
+
+      // Cache the result
+      messageCache.set(sessionId, { data: formattedMessages, timestamp: Date.now() });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load messages');
     } finally {
@@ -109,6 +138,17 @@ export function useSupabaseChat() {
       };
 
       setMessages(prev => [...prev, newMessage]);
+
+      // Invalidate caches when new message is added
+      messageCache.delete(sessionId);
+
+      // Invalidate session cache (message count might have changed)
+      for (const key of sessionCache.keys()) {
+        if (key.startsWith(user.id)) {
+          sessionCache.delete(key);
+        }
+      }
+
       return messageId;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add message';

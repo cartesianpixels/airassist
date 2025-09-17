@@ -12,17 +12,194 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSupabaseChat } from "@/hooks/useSupabaseChat";
 
+// Helper function to generate personalized questions based on user profile
+function getPersonalizedQuestions(metadata: any) {
+  const role = metadata?.role || 'student';
+  const experience = metadata?.experience || 'beginner';
+  const interests = metadata?.interests || [];
+
+  const questionSets = {
+    student: {
+      beginner: [
+        "What are the basic requirements to become a pilot?",
+        "Can you explain the difference between VFR and IFR flying?",
+        "What are the main components of an aircraft control system?",
+        "How do I read a sectional chart for navigation?"
+      ],
+      intermediate: [
+        "What are the weather minimums for VFR flight?",
+        "Explain the process of filing a flight plan",
+        "How do radio communications work in controlled airspace?",
+        "What should I know about cross-country flight planning?"
+      ],
+      advanced: [
+        "What are the commercial pilot license requirements?",
+        "Explain instrument approach procedures",
+        "How do you handle emergency situations during flight?",
+        "What are the differences between Class B, C, and D airspace?"
+      ]
+    },
+    pilot: {
+      beginner: [
+        "What are the currency requirements for pilots?",
+        "How do I maintain my medical certificate?",
+        "What are the recent changes in aviation regulations?",
+        "Can you explain night flying requirements?"
+      ],
+      intermediate: [
+        "What are the requirements for an instrument rating?",
+        "How do I plan for weather-related flight diversions?",
+        "Explain the use of GPS for navigation",
+        "What are the insurance requirements for aircraft ownership?"
+      ],
+      advanced: [
+        "What are the ATP requirements and training?",
+        "How do I transition to turbine aircraft?",
+        "Explain high-altitude flight operations",
+        "What are the regulatory requirements for commercial operations?"
+      ]
+    },
+    controller: {
+      beginner: [
+        "What are the basic air traffic control phraseology standards?",
+        "How do you handle aircraft separation requirements?",
+        "Explain the different types of radar services",
+        "What are the emergency procedures for controllers?"
+      ],
+      intermediate: [
+        "How do you manage traffic flow in busy airspace?",
+        "Explain approach and departure procedures",
+        "What are the weather minimums for different operations?",
+        "How do you coordinate with other control facilities?"
+      ],
+      advanced: [
+        "What are the procedures for handling system failures?",
+        "Explain complex airspace management scenarios",
+        "How do you handle multiple emergency situations?",
+        "What are the latest NextGen implementation procedures?"
+      ]
+    },
+    instructor: {
+      beginner: [
+        "What are the requirements to become a CFI?",
+        "How do you structure effective flight lessons?",
+        "What are the best practices for ground instruction?",
+        "How do you handle student pilot challenges?"
+      ],
+      intermediate: [
+        "How do you prepare students for their checkrides?",
+        "What are effective methods for teaching complex maneuvers?",
+        "How do you handle different learning styles?",
+        "What are the insurance requirements for flight instruction?"
+      ],
+      advanced: [
+        "How do you transition to teaching in complex aircraft?",
+        "What are the requirements for CFII and MEI ratings?",
+        "How do you maintain currency as an instructor?",
+        "What are the best practices for safety management in training?"
+      ]
+    }
+  };
+
+  // Get base questions for role and experience
+  let baseQuestions = questionSets[role as keyof typeof questionSets]?.[experience as keyof typeof questionSets.student] || questionSets.student.beginner;
+
+  // Filter by interests if available
+  if (interests.length > 0) {
+    const interestKeywords = {
+      'IFR Procedures': ['IFR', 'instrument', 'approach'],
+      'VFR Operations': ['VFR', 'visual', 'sectional'],
+      'Weather Analysis': ['weather', 'minimums', 'conditions'],
+      'Navigation': ['navigation', 'GPS', 'chart'],
+      'Emergency Procedures': ['emergency', 'failure', 'procedures'],
+      'Aircraft Systems': ['aircraft', 'systems', 'components'],
+      'Regulations (FAR/AIM)': ['regulations', 'requirements', 'currency'],
+      'Airport Operations': ['airport', 'airspace', 'traffic']
+    };
+
+    // Prioritize questions that match user interests
+    const matchedQuestions = baseQuestions.filter((question: string) =>
+      interests.some((interest: string) => {
+        const keywords = interestKeywords[interest as keyof typeof interestKeywords] || [];
+        return keywords.some((keyword: string) =>
+          question.toLowerCase().includes(keyword.toLowerCase())
+        );
+      })
+    );
+
+    if (matchedQuestions.length >= 2) {
+      return matchedQuestions.slice(0, 4);
+    }
+  }
+
+  return baseQuestions.slice(0, 4);
+}
+
 function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { sessions, loadChatSessions } = useSupabaseChat();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [isNewUser, setIsNewUser] = React.useState(false);
 
   React.useEffect(() => {
     if (user) {
       loadChatSessions();
+      fetchUserProfile();
     }
   }, [user, loadChatSessions]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { createClient } = await import('@/lib/supabase');
+      const supabase = createClient();
+
+      // Use array query instead of single() to avoid errors for new users
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id);
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      // Handle new users without profiles
+      if (!profiles || profiles.length === 0) {
+        console.log('No profile found for user, creating default profile...');
+        setIsNewUser(true);
+
+        // Create a default profile for display while the trigger catches up
+        const defaultProfile = {
+          id: user?.id,
+          email: user?.email,
+          full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0],
+          avatar_url: user?.user_metadata?.avatar_url,
+          created_at: new Date().toISOString(),
+          onboarding_completed: false,
+          experience_level: null,
+          user_role: null,
+          interests: null
+        };
+        setUserProfile(defaultProfile);
+        return;
+      }
+
+      const profile = profiles[0];
+      setUserProfile(profile);
+
+      // Check if user just completed onboarding (created within last 24 hours and has no sessions)
+      const accountAge = Date.now() - new Date(profile.created_at).getTime();
+      const isNewAccount = accountAge < 24 * 60 * 60 * 1000; // 24 hours
+      setIsNewUser(isNewAccount && sessions.length === 0);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Set as new user if there's any error
+      setIsNewUser(true);
+    }
+  };
 
   // Show loading screen
   if (loading) {
@@ -142,14 +319,19 @@ function DashboardPage() {
                 </div>
 
                 <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent leading-tight">
-                  Welcome back,<br />
+                  {isNewUser ? 'Welcome to AirAssist,' : 'Welcome back,'}
+                  <br />
                   <span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-                    {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                    {userProfile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]}
                   </span>
+                  {isNewUser && '! 🎉'}
                 </h1>
 
                 <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                  Ready to practice ATC procedures? Start a new conversation or continue from where you left off.
+                  {isNewUser
+                    ? `Great job completing the onboarding! As a ${userProfile?.metadata?.role || 'student'} with ${userProfile?.metadata?.experience || 'beginner'} experience, you're ready to start your aviation learning journey.`
+                    : 'Ready to practice ATC procedures? Start a new conversation or continue from where you left off.'
+                  }
                 </p>
 
                 {/* Primary CTA */}
@@ -175,7 +357,7 @@ function DashboardPage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
                     <div className="relative flex items-center gap-3">
                       <MessageSquare className="w-5 h-5" />
-                      Start New Chat Session
+                      {isNewUser ? 'Start Your First Chat!' : 'Start New Chat Session'}
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                     </div>
                   </Button>
@@ -196,6 +378,7 @@ function DashboardPage() {
               </div>
             </div>
           </div>
+
 
           {/* Modern Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

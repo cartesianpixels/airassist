@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { LoginButton } from "@/components/auth/LoginButton";
 import { Button } from "@/components/ui/button";
 import { Sparkles, MessageSquare, BarChart3, Settings } from "lucide-react";
 import { motion } from "framer-motion";
@@ -48,10 +47,12 @@ function HomePage() {
                 AirAssist
               </span>
             </div>
-            <LoginButton
-              redirectTo="/dashboard"
+            <Button
+              onClick={() => router.push('/auth/login')}
               className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-            />
+            >
+              Sign In
+            </Button>
           </div>
         </nav>
 
@@ -78,13 +79,13 @@ function HomePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <LoginButton
-                  redirectTo="/dashboard"
+                <Button
+                  onClick={() => router.push('/auth/login')}
                   className="px-8 py-4 text-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <MessageSquare className="w-5 h-5 mr-2" />
                   Start Training
-                </LoginButton>
+                </Button>
                 <Button
                   variant="outline"
                   size="lg"
@@ -178,13 +179,13 @@ function HomePage() {
                   Join thousands of IVAO controllers improving their skills with AirAssist
                 </p>
               </div>
-              <LoginButton
-                redirectTo="/dashboard"
+              <Button
+                onClick={() => router.push('/auth/login')}
                 className="px-8 py-4 text-lg bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <MessageSquare className="w-5 h-5 mr-2" />
                 Get Started Free
-              </LoginButton>
+              </Button>
             </motion.div>
           </div>
         </div>

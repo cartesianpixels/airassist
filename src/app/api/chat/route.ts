@@ -220,7 +220,9 @@ Answer the user's question based on this knowledge.`
                 total: finalTokenUsage.totalTokens,
               },
               finalCost.totalCost,
-              modelToUse
+              modelToUse,
+              undefined,
+              sessionId
             ),
             // Track response received event
             analytics.trackResponseReceived(user.id, sessionId || 'unknown', {
@@ -248,7 +250,8 @@ Answer the user's question based on this knowledge.`
             undefined,
             undefined,
             modelToUse,
-            error instanceof Error ? error.message : 'Unknown error'
+            error instanceof Error ? error.message : 'Unknown error',
+            sessionId
           ).catch(console.error);
           
           controller.error(error);
@@ -270,17 +273,24 @@ Answer the user's question based on this knowledge.`
   } catch (error) {
     console.error(`[${requestId}] API route error:`, error);
     
-    // Track error in analytics
-    if (user?.id) {
-      trackApiCall(
-        user.id,
-        '/api/chat',
-        startTime,
-        undefined,
-        undefined,
-        undefined,
-        error instanceof Error ? error.message : 'Unknown error'
-      ).catch(console.error);
+    // Track error in analytics (if user is available)
+    try {
+      // Re-get user from auth in case it wasn't available in outer scope
+      const { data: { user: errorUser } } = await createSupabaseServerClient().auth.getUser();
+      if (errorUser?.id) {
+        trackApiCall(
+          errorUser.id,
+          '/api/chat',
+          startTime,
+          undefined,
+          undefined,
+          undefined,
+          error instanceof Error ? error.message : 'Unknown error',
+          undefined // sessionId not available in this error case
+        ).catch(console.error);
+      }
+    } catch (analyticsError) {
+      console.error('Failed to track error analytics:', analyticsError);
     }
     
     return new Response(

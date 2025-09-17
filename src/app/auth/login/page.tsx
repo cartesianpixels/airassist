@@ -2,9 +2,35 @@
 
 import { motion } from 'framer-motion';
 import { LoginButton } from '@/components/auth/LoginButton';
-import { Sparkles, Shield, MessageSquare, Zap } from 'lucide-react';
+import { Sparkles, Shield, MessageSquare, Zap, AlertCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+  const message = searchParams.get('message');
+
+  const getErrorMessage = (error: string | null, message: string | null) => {
+    if (message) return message;
+
+    switch (error) {
+      case 'server_error':
+        return 'Database error occurred during sign up. Please try again.';
+      case 'exchange_failed':
+        return 'Authentication failed. Please try signing in again.';
+      case 'invalid_session':
+        return 'Failed to create session. Please try again.';
+      case 'no_code':
+        return 'No authorization code received. Please try again.';
+      case 'unexpected_error':
+        return 'An unexpected error occurred. Please try again.';
+      default:
+        return null;
+    }
+  };
+
+  const errorMessage = getErrorMessage(error, message);
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -25,6 +51,22 @@ export default function LoginPage() {
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
             </motion.div>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {errorMessage}
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Heading */}
             <div className="space-y-2">
@@ -92,5 +134,22 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center animate-pulse">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-slate-600 dark:text-slate-400">Loading...</span>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

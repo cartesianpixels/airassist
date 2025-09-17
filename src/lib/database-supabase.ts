@@ -100,6 +100,23 @@ export async function createChatSession(title: string, userId: string): Promise<
   return data.id;
 }
 
+export async function updateSessionTitle(sessionId: string, title: string): Promise<void> {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({
+      title: title.trim(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error('Error updating session title:', error);
+    throw error;
+  }
+}
+
 export async function addMessageToSession(
   sessionId: string,
   userId: string,

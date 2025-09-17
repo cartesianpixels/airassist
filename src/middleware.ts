@@ -42,25 +42,57 @@ async function checkRateLimit(userId: string, userTier: keyof typeof RATE_LIMITS
   return { allowed: true, limit: config.requests, remaining: config.requests - current.count, resetTime: current.resetTime };
 }
 
-async function trackAnalytics(request: NextRequest, user: any, response: NextResponse) {
+async function trackAnalytics(request: NextRequest, user: any, response: NextResponse, supabase: any) {
   try {
-    // Track page views and API calls
-    const analytics = {
-      userId: user?.id || 'anonymous',
-      path: request.nextUrl.pathname,
-      method: request.method,
-      userAgent: request.headers.get('user-agent') || '',
-      ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
-      timestamp: new Date().toISOString(),
-      sessionId: request.cookies.get('session-id')?.value || null,
+    // Only track actual page visits and API calls, skip static assets
+    const path = request.nextUrl.pathname;
+    if (path.includes('/_next/') || path.includes('/api/') || path.includes('.')) {
+      return;
+    }
+
+    // Generate or get session ID
+    let sessionId = request.cookies.get('airassist-session')?.value;
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      response.cookies.set('airassist-session', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+    }
+
+    const analyticsData = {
+      user_id: user?.id || null,
+      event_type: 'page_view',
+      event_data: {
+        path: path,
+        method: request.method,
+        userAgent: request.headers.get('user-agent') || '',
+        referrer: request.headers.get('referer') || null,
+      },
+      session_id: sessionId,
+      created_at: new Date().toISOString(),
     };
-    
+
+    // Store in database if user is authenticated
+    if (user?.id) {
+      await supabase
+        .from('analytics_events')
+        .insert(analyticsData);
+    }
+
     // Add analytics headers to response
     response.headers.set('x-analytics-tracked', 'true');
-    response.headers.set('x-user-id', analytics.userId);
-    
-    // In production, send to analytics service
-    console.log('Analytics tracked:', analytics);
+    response.headers.set('x-session-id', sessionId);
+    response.headers.set('x-user-id', user?.id || 'anonymous');
+
+    console.log('Analytics tracked:', {
+      userId: user?.id || 'anonymous',
+      path,
+      sessionId,
+      timestamp: analyticsData.created_at
+    });
   } catch (error) {
     console.error('Analytics tracking error:', error);
   }
@@ -171,11 +203,32 @@ export async function middleware(request: NextRequest) {
 
   // Check admin access
   if (isAdminPath && user) {
-    // TODO: Check user role from database
-    const isAdmin = user.email?.includes('admin') || false; // Placeholder logic
-    
-    if (!isAdmin) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+    try {
+      // Check user role from database
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error || !profile) {
+        console.log('No profile found for user:', user.id);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      const isAdmin = profile.role === 'admin' ||
+                     user.email?.includes('admin') || // Fallback for development
+                     false;
+
+      if (!isAdmin) {
+        console.log('User is not admin:', user.email, 'role:', profile.role);
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+
+      console.log('Admin access granted for:', user.email);
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
@@ -202,7 +255,7 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Response-Time', `${processingTime}ms`);
 
   // Track analytics
-  await trackAnalytics(request, user, response);
+  await trackAnalytics(request, user, response, supabase);
 
   return response
 }

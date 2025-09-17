@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { OnboardingRedirect } from '@/components/auth/OnboardingRedirect';
 
 export const metadata: Metadata = {
   title: 'AirAssist - IVAO US Division',
@@ -30,7 +31,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+          <OnboardingRedirect>
+            {children}
+          </OnboardingRedirect>
           <Toaster />
         </AuthProvider>
       </body>

@@ -82,7 +82,7 @@ export function ModernSidebar({
   const handleNewChat = async () => {
     try {
       const { createChatSession } = await import('@/lib/database-supabase');
-      const sessionId = await createChatSession("New Chat Session", user.id);
+      const sessionId = await createChatSession("New Chat Session", user?.id || '');
       router.push(`/chat/${sessionId}`);
       onClose();
     } catch (error) {
@@ -211,6 +211,22 @@ export function ModernSidebar({
                   >
                     <PlusCircle className="w-5 h-5 mr-2" />
                     New Chat
+                  </Button>
+                </motion.div>
+
+                {/* Dashboard Button */}
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-3">
+                  <Button
+                    onClick={() => {
+                      router.push("/dashboard");
+                      onClose();
+                    }}
+                    variant="outline"
+                    className="w-full glass-strong border-brand-primary/30 hover:border-brand-primary text-brand-primary hover:text-brand-primary hover:bg-brand-primary/10 transition-all duration-300"
+                    size="lg"
+                  >
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    Dashboard
                   </Button>
                 </motion.div>
 
@@ -381,19 +397,7 @@ export function ModernSidebar({
               {/* Footer */}
               <div className="p-4 border-t border-border/50">
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      router.push("/dashboard");
-                      onClose();
-                    }}
-                    className="glass border-border/30 hover:border-brand-primary/50 text-foreground-secondary hover:text-brand-primary"
-                  >
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Dashboard
-                  </Button>
+                <div className="mb-4">
                   <Button
                     variant="outline"
                     size="sm"
@@ -401,7 +405,7 @@ export function ModernSidebar({
                       router.push("/settings");
                       onClose();
                     }}
-                    className="glass border-border/30 hover:border-brand-primary/50 text-foreground-secondary hover:text-brand-primary"
+                    className="w-full glass border-border/30 hover:border-brand-primary/50 text-foreground-secondary hover:text-brand-primary"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     Settings

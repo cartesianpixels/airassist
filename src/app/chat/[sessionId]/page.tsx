@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
@@ -13,6 +13,7 @@ import { ModernSidebar } from "@/components/modern-sidebar";
 import type { Message } from "@/lib/types";
 import { useOpenAIChat } from "@/hooks/use-openai-chat";
 import { useSupabaseChat } from "@/hooks/useSupabaseChat";
+import { useChatNaming, getGenericPromptTitle, shouldAutoNameChat } from "@/hooks/useChatNaming";
 import { Sparkles, Send, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,13 +22,18 @@ import { motion, AnimatePresence } from "framer-motion";
 function ChatSessionPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = params.sessionId as string;
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [isThinking, setIsThinking] = React.useState(false);
   const [streamingMessageId, setStreamingMessageId] = React.useState<string | null>(null);
+  const [promptSent, setPromptSent] = React.useState(false);
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Chat naming functionality
+  const { autoNameChat } = useChatNaming();
 
   // Supabase chat integration
   const {
@@ -87,6 +93,20 @@ function ChatSessionPage() {
     }
   }, [sessionId, user, currentSessionId, loadChatMessages, router]);
 
+  // Handle auto-sending prompt from URL parameter
+  React.useEffect(() => {
+    const promptParam = searchParams.get('prompt');
+    if (promptParam && !promptSent && user && currentSessionId === sessionId && messages.length === 0) {
+      // Wait a moment for the session to fully load, then send the prompt
+      const timer = setTimeout(() => {
+        setPromptSent(true);
+        handleSendMessage(promptParam);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, promptSent, user, currentSessionId, sessionId, messages.length]);
+
   const handleSendMessage = async (input: string) => {
     if (!input.trim() || streamingState.isStreaming || !user) return;
 
@@ -99,6 +119,25 @@ function ChatSessionPage() {
       }
 
       console.log('Adding message to session:', currentSessionId);
+
+      // Check if this is the first message and if we can name it immediately
+      const isFirstMessage = messages.length === 0;
+      let immediateTitle: string | null = null;
+
+      if (isFirstMessage) {
+        immediateTitle = getGenericPromptTitle(input.trim());
+        if (immediateTitle) {
+          console.log('Setting immediate title:', immediateTitle);
+          // Update session title immediately for generic prompts
+          try {
+            const { updateSessionTitle } = await import('@/lib/database-supabase');
+            await updateSessionTitle(currentSessionId, immediateTitle);
+          } catch (error) {
+            console.error('Error setting immediate title:', error);
+          }
+        }
+      }
+
       // Add user message to Supabase
       await addMessage(currentSessionId, 'user', input.trim());
 
@@ -119,7 +158,7 @@ function ChatSessionPage() {
 
       // Send message to API
       await sendMessage(
-        [...messages, { role: 'user' as const, content: input.trim() }].map((msg) => 
+        [...messages, { role: 'user' as const, content: input.trim() }].map((msg) =>
           'id' in msg ? { role: msg.role, content: msg.content } : msg
         ),
         newStreamingId
@@ -156,6 +195,20 @@ function ChatSessionPage() {
       );
 
       setStreamingMessageId(null);
+
+      // Check if we should auto-name this chat after completion
+      const updatedMessages = [...messages, completedMessage];
+      if (shouldAutoNameChat(updatedMessages)) {
+        console.log('Auto-naming chat after', updatedMessages.length, 'messages');
+        try {
+          const result = await autoNameChat(currentSessionId, updatedMessages);
+          if (result.success && result.title) {
+            console.log('Chat auto-named:', result.title);
+          }
+        } catch (error) {
+          console.error('Error auto-naming chat:', error);
+        }
+      }
     } catch (error) {
       console.error('Error saving completed message:', error);
       setStreamingMessageId(null);
@@ -294,33 +347,52 @@ function ChatSessionPage() {
                   <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center mx-auto mb-6 shadow-brand">
                     <Sparkles className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold text-foreground mb-2">
-                    New Chat Session
-                  </h2>
-                  <p className="text-foreground-secondary mb-8 max-w-md mx-auto">
-                    Ask me anything about air traffic control procedures, regulations, or flight operations.
-                  </p>
 
-                  {/* Quick Actions */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                    {[
-                      "What are IFR separation requirements?",
-                      "Explain runway incursion procedures",
-                      "How do I handle aircraft emergencies?",
-                      "What are approach weather minimums?"
-                    ].map((prompt, index) => (
-                      <motion.button
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 + index * 0.1 }}
-                        onClick={() => handleSendMessage(prompt)}
-                        className="p-4 text-left glass-strong rounded-xl border border-border/50 hover:border-brand-primary/50 hover-lift transition-all duration-300"
-                      >
-                        <span className="text-sm text-foreground">{prompt}</span>
-                      </motion.button>
-                    ))}
-                  </div>
+                  {searchParams.get('prompt') && !promptSent ? (
+                    <>
+                      <h2 className="text-2xl font-bold text-foreground mb-2">
+                        Starting your conversation...
+                      </h2>
+                      <p className="text-foreground-secondary mb-8 max-w-md mx-auto">
+                        Sending your question: "{searchParams.get('prompt')}"
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-2xl font-bold text-foreground mb-2">
+                        New Chat Session
+                      </h2>
+                      <p className="text-foreground-secondary mb-8 max-w-md mx-auto">
+                        Ask me anything about air traffic control procedures, regulations, or flight operations.
+                      </p>
+
+                      {/* Quick Actions */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                        {[
+                          "What are IFR separation requirements?",
+                          "Explain runway incursion procedures",
+                          "How do I handle aircraft emergencies?",
+                          "What are approach weather minimums?"
+                        ].map((prompt, index) => (
+                          <motion.button
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.4 + index * 0.1 }}
+                            onClick={() => handleSendMessage(prompt)}
+                            className="p-4 text-left glass-strong rounded-xl border border-border/50 hover:border-brand-primary/50 hover-lift transition-all duration-300"
+                          >
+                            <span className="text-sm text-foreground">{prompt}</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               ) : (
                 <div className="space-y-6">
