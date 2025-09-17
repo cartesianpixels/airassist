@@ -24,7 +24,8 @@ export function LoginButton({ redirectTo = '/', className, children }: LoginButt
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
-          }
+          },
+          skipBrowserRedirect: false
         },
       });
 
