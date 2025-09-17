@@ -115,28 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!profiles || profiles.length === 0) {
           console.log('No profile found, attempting to create one for user:', userId);
 
-          // First try using the database function (if available)
-          try {
-            const { data: funcResult, error: funcError } = await supabase.rpc('create_user_profile', {
-              user_id: userId,
-              user_email: user?.email || '',
-              user_name: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
-              avatar_url: user?.user_metadata?.avatar_url || null
-            });
-
-            if (!funcError && funcResult) {
-              console.log('Profile created via database function:', funcResult);
-              setProfile(funcResult as Profile);
-              setProfileLoading(false);
-              return funcResult as Profile;
-            }
-
-            console.log('Database function not available or failed, trying direct insert');
-          } catch (funcErr) {
-            console.log('Database function error, falling back to direct insert:', funcErr);
-          }
-
-          // Fallback to direct insert
+          // Create profile using direct insert
           const defaultProfile: Partial<Profile> = {
             id: userId,
             email: user?.email || '',
