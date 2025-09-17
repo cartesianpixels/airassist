@@ -1,9 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
-import type { Profile } from '@/lib/supabase-typed';
+import { supabase, type Profile } from '@/lib/supabase-typed';
 
 interface AuthContextType {
   user: User | null;
@@ -45,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
@@ -76,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updated_at: new Date().toISOString(),
         };
 
-        const { data: newProfile, error: createError } = await supabase
+        const { data: newProfile, error: createError } = await (supabase as any)
           .from('profiles')
           .upsert(defaultProfile)
           .select()
@@ -111,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setProfile(prev => prev ? { ...prev, ...updates, updated_at: new Date().toISOString() } : null);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', user.id);

@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Copy, ThumbsUp, ThumbsDown, User, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Message } from "@/lib/types";
+import type { Message } from "@/lib/supabase-typed";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";

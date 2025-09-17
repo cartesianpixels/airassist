@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { AppHeader } from "@/components/app-header";
 import { ModernSidebar } from "@/components/modern-sidebar";
-import type { Message } from "@/lib/types";
+import type { Message } from "@/lib/supabase-typed";
 import { useOpenAIChat } from "@/hooks/use-openai-chat";
 import { useSupabaseChat } from "@/hooks/useSupabaseChat";
 import { generateChatTitle, renameChat, shouldAutoNameChat, getGenericPromptTitle } from "@/lib/chat-naming";
@@ -148,19 +148,19 @@ function ChatSessionPage() {
       const newStreamingId = String(Date.now());
       setStreamingMessageId(newStreamingId);
 
-      const assistantMessage: Message = {
+      const assistantMessage = {
         id: newStreamingId,
-        role: "assistant",
+        role: "assistant" as const,
         content: "",
       };
 
-      setSupabaseMessages(prev => [...prev, assistantMessage]);
+      setSupabaseMessages(prev => [...prev, assistantMessage as any]);
 
       // Send message to API
       await sendMessage(
         [...messages, { role: 'user' as const, content: input.trim() }].map((msg) =>
           'id' in msg ? { role: msg.role, content: msg.content } : msg
-        ),
+        ) as any,
         newStreamingId
       );
     } catch (error) {
@@ -182,15 +182,15 @@ function ChatSessionPage() {
       await addMessage(currentSessionId, 'assistant', finalContent);
 
       // Update local state
-      const completedMessage: Message = {
+      const completedMessage = {
         id: targetMessageId,
-        role: "assistant",
+        role: "assistant" as const,
         content: finalContent,
       };
 
       setSupabaseMessages(prev =>
         prev.map(msg =>
-          msg.id === targetMessageId ? completedMessage : msg
+          msg.id === targetMessageId ? completedMessage as any : msg
         )
       );
 

@@ -3,7 +3,7 @@ import type { Profile } from '@/lib/supabase-typed';
 
 export async function getUserProfile(userId: string): Promise<Profile | null> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
 
     const { data: profiles, error } = await supabase
       .from('profiles')
@@ -24,7 +24,7 @@ export async function getUserProfile(userId: string): Promise<Profile | null> {
 
 export async function getUserTier(userId: string): Promise<'free' | 'basic' | 'pro' | 'enterprise'> {
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
 
     const { data: profiles, error } = await supabase
       .from('profiles')
@@ -36,7 +36,7 @@ export async function getUserTier(userId: string): Promise<'free' | 'basic' | 'p
       return 'free';
     }
 
-    return profiles?.[0]?.tier || 'free';
+    return (profiles as any)?.[0]?.tier || 'free';
   } catch (error) {
     console.error('Error in getUserTier:', error);
     return 'free';

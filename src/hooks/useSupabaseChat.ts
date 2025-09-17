@@ -5,10 +5,10 @@ import {
   addMessageToSession,
   getUserChatSessions,
   getChatSessionMessages,
-  updateChatSessionTitle,
+  updateSessionTitle,
   deleteChatSession,
 } from '@/lib/database-supabase';
-import type { Message } from '@/lib/types';
+import type { Message } from '@/lib/supabase-typed';
 
 // Cache for sessions and messages to reduce database calls
 const sessionCache = new Map<string, { data: any[]; timestamp: number }>();
@@ -81,12 +81,12 @@ export function useSupabaseChat() {
       setError(null);
       const messagesData = await getChatSessionMessages(sessionId, user.id);
 
-      const formattedMessages: Message[] = (messagesData as any[]).map((msg: any) => ({
+      const formattedMessages = (messagesData as any[]).map((msg: any) => ({
         id: msg.id,
         role: msg.role as "user" | "assistant",
         content: msg.content,
         resources: msg.resources || undefined,
-      }));
+      })) as any;
 
       setMessages(formattedMessages);
       setCurrentSessionId(sessionId);
@@ -130,12 +130,12 @@ export function useSupabaseChat() {
       const messageId = await addMessageToSession(sessionId, user.id, role, content, resources);
 
       // Add message to local state
-      const newMessage: Message = {
+      const newMessage = {
         id: messageId,
         role: role as "user" | "assistant",
         content,
         resources,
-      };
+      } as any;
 
       setMessages(prev => [...prev, newMessage]);
 
@@ -162,7 +162,7 @@ export function useSupabaseChat() {
 
     try {
       setError(null);
-      await updateChatSessionTitle(sessionId, user.id, title);
+      await updateSessionTitle(sessionId, title);
       await loadChatSessions(); // Refresh sessions list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update session title');

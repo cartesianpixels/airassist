@@ -26,7 +26,7 @@ import {
   BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { analytics } from "@/lib/analytics";
+import { insertAnalytics, type AnalyticsEventInsert } from "@/lib/supabase-typed";
 
 interface OnboardingStep {
   id: string;
@@ -524,16 +524,23 @@ export function OnboardingFlow() {
 
       // Track onboarding completion
       if (user?.id) {
-        await analytics.trackEvent({
-          userId: user.id,
-          eventType: 'user_login',
-          eventData: {
-            onboarding_completed: true,
-            role: profile.role,
-            experience: profile.experience,
-            interests_count: profile.interests.length
-          }
-        });
+        try {
+          const analyticsData: AnalyticsEventInsert = {
+            user_id: user.id,
+            session_id: null,
+            event_type: 'user_login',
+            event_data: {
+              onboarding_completed: true,
+              role: profile.role,
+              experience: profile.experience,
+              interests_count: profile.interests.length
+            }
+          };
+
+          await insertAnalytics(analyticsData);
+        } catch (error) {
+          console.error('Analytics tracking error:', error);
+        }
       }
 
       // Redirect to dashboard

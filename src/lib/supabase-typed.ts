@@ -1,10 +1,12 @@
 import { createClient as createBrowserClient } from '@/lib/supabase'
-// Server client removed for security - client-side only
 import type { Database } from '@/types/database'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Export typed Supabase client instance
+export const supabase: SupabaseClient<Database> = createBrowserClient()
 
 // Type-safe Supabase client wrapper
 export type TypedSupabaseClient = ReturnType<typeof createBrowserClient>
-// Server client removed for security
 
 // Type helpers
 export type Tables = Database['public']['Tables']
@@ -36,3 +38,30 @@ export type ApiUsageLogUpdate = Tables['api_usage_logs']['Update']
 export type RateLimitUpdate = Tables['rate_limits']['Update']
 export type SystemMetricUpdate = Tables['system_metrics']['Update']
 export type UsageAnalyticsUpdate = Tables['usage_analytics']['Update']
+
+// Utility functions with proper typing
+export async function insertAnalytics(data: AnalyticsEventInsert) {
+  const { data: result, error } = await (supabase as any)
+    .from('analytics_events')
+    .insert(data);
+
+  if (error) {
+    console.error('Analytics insert error:', error);
+    throw error;
+  }
+
+  return result;
+}
+
+export async function insertUsageLog(data: ApiUsageLogInsert) {
+  const { data: result, error } = await (supabase as any)
+    .from('api_usage_logs')
+    .insert(data);
+
+  if (error) {
+    console.error('Usage log insert error:', error);
+    throw error;
+  }
+
+  return result;
+}

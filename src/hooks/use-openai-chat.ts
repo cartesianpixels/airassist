@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Message } from '@/lib/types';
+import type { Message } from '@/lib/supabase-typed';
 
 export interface StreamingState {
   isStreaming: boolean;

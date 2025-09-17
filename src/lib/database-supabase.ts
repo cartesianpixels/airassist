@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-typed';
 import { Database } from '@/types/database';
 
 export interface SearchResult {
@@ -33,7 +33,6 @@ export async function supabaseSemanticSearch(
   try {
     console.log(`Starting Supabase semantic search for: "${query.substring(0, 100)}"`);
 
-    const supabase = createClient();
 
     // Get embedding for the query
     const { getEmbedding } = await import('./embeddings');
@@ -79,9 +78,8 @@ export async function supabaseSemanticSearch(
 }
 
 export async function createChatSession(title: string, userId: string): Promise<string> {
-  const supabase = createClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('chat_sessions')
     .insert({
       user_id: userId,
@@ -101,10 +99,9 @@ export async function createChatSession(title: string, userId: string): Promise<
 }
 
 export async function updateSessionTitle(sessionId: string, title: string): Promise<void> {
-  const supabase = createClient();
 
-  const { error } = await supabase
-    .from('user_sessions')
+  const { error } = await (supabase as any)
+    .from('chat_sessions')
     .update({
       title: title.trim(),
       updated_at: new Date().toISOString()
@@ -124,7 +121,6 @@ export async function addMessageToSession(
   content: string,
   resources?: any
 ): Promise<string> {
-  const supabase = createClient();
 
   // First verify the session exists (RLS will ensure user owns it)
   const { data: sessionData, error: sessionError } = await supabase
@@ -139,7 +135,7 @@ export async function addMessageToSession(
   }
 
   // Insert the message with user_id (required by database schema)
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('messages')
     .insert({
       chat_session_id: sessionId,
@@ -161,7 +157,6 @@ export async function addMessageToSession(
 }
 
 export async function getUserChatSessions(userId: string, limit: number = 20, offset: number = 0) {
-  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('chat_sessions')
@@ -184,7 +179,7 @@ export async function getUserChatSessions(userId: string, limit: number = 20, of
   }
 
   // Transform data to include message count
-  const sessions = (data || []).map(session => ({
+  const sessions = (data || []).map((session: any) => ({
     ...session,
     message_count: session.messages?.length || 0,
     last_message_at: session.updated_at
@@ -194,7 +189,6 @@ export async function getUserChatSessions(userId: string, limit: number = 20, of
 }
 
 export async function getChatSessionMessages(sessionId: string, userId: string) {
-  const supabase = createClient();
 
   // First verify the session exists (RLS will ensure user owns it)
   const { data: sessionData, error: sessionError } = await supabase
@@ -222,22 +216,8 @@ export async function getChatSessionMessages(sessionId: string, userId: string) 
   return data || [];
 }
 
-export async function updateChatSessionTitle(sessionId: string, userId: string, title: string) {
-  const supabase = createClient();
-
-  const { error } = await (supabase as any)
-    .from('chat_sessions')
-    .update({ title })
-    .eq('id', sessionId);
-
-  if (error) {
-    console.error('Error updating chat session title:', error);
-    throw error;
-  }
-}
 
 export async function deleteChatSession(sessionId: string, userId: string) {
-  const supabase = createClient();
 
   const { error } = await supabase
     .from('chat_sessions')
@@ -250,70 +230,4 @@ export async function deleteChatSession(sessionId: string, userId: string) {
   }
 }
 
-export async function getUserProfile(userId: string) {
-  const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-    console.error('Error getting user profile:', error);
-    throw error;
-  }
-
-  return data;
-}
-
-export async function updateUserProfile(userId: string, updates: any) {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .upsert({ id: userId, ...updates })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating user profile:', error);
-    throw error;
-  }
-
-  return data;
-}
-
-export async function getUserSettings(userId: string) {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error getting user settings:', error);
-    throw error;
-  }
-
-  return data;
-}
-
-export async function updateUserSettings(userId: string, settings: any) {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from('user_settings')
-    .upsert({ user_id: userId, ...settings })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating user settings:', error);
-    throw error;
-  }
-
-  return data;
-}

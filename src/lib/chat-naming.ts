@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase';
-import type { ChatSessionUpdate, AnalyticsEventInsert } from '@/lib/supabase-typed';
+import { supabase, insertAnalytics, type ChatSessionUpdate, type AnalyticsEventInsert } from '@/lib/supabase-typed';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -22,7 +21,6 @@ export async function generateChatTitle(sessionId: string, messages: ChatMessage
     };
   }
 
-  const supabase = createClient();
 
   try {
     // Get current user
@@ -50,7 +48,7 @@ export async function generateChatTitle(sessionId: string, messages: ChatMessage
       };
     }
 
-    const session = sessions[0];
+    const session = sessions[0] as { id: string; user_id: string; title: string | null };
 
     // Skip if already has a custom title (not "New Chat Session")
     if (session.title && !session.title.includes('New Chat') && !session.title.includes('Untitled')) {
@@ -97,14 +95,12 @@ export async function generateChatTitle(sessionId: string, messages: ChatMessage
     }
 
     // Update session title in database
-    const updateData: ChatSessionUpdate = {
-      title: generatedTitle,
-      updated_at: new Date().toISOString()
-    };
-
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('chat_sessions')
-      .update(updateData)
+      .update({
+        title: generatedTitle,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', sessionId);
 
     if (updateError) {
@@ -130,9 +126,7 @@ export async function generateChatTitle(sessionId: string, messages: ChatMessage
         }
       };
 
-      await supabase
-        .from('analytics_events')
-        .insert(analyticsData);
+      await insertAnalytics(analyticsData);
     } catch (analyticsError) {
       console.error('Analytics tracking error:', analyticsError);
     }
@@ -162,7 +156,6 @@ export async function renameChat(sessionId: string, title: string): Promise<Nami
     };
   }
 
-  const supabase = createClient();
 
   try {
     // Get current user
@@ -175,15 +168,13 @@ export async function renameChat(sessionId: string, title: string): Promise<Nami
       };
     }
 
-    // Update session title
-    const updateData: ChatSessionUpdate = {
-      title: title.trim(),
-      updated_at: new Date().toISOString()
-    };
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('chat_sessions')
-      .update(updateData)
+      .update({
+        title: title.trim(),
+        updated_at: new Date().toISOString()
+      })
       .eq('id', sessionId)
       .eq('user_id', user.id);
 
@@ -208,9 +199,7 @@ export async function renameChat(sessionId: string, title: string): Promise<Nami
         }
       };
 
-      await supabase
-        .from('analytics_events')
-        .insert(analyticsData);
+      await insertAnalytics(analyticsData);
     } catch (analyticsError) {
       console.error('Analytics tracking error:', analyticsError);
     }

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use client-side Supabase (secure with RLS policies)
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase-typed';
 import { Button } from '@/components/ui/button';
 import { Chrome } from 'lucide-react';
 
@@ -13,7 +13,6 @@ interface LoginButtonProps {
 
 export function LoginButton({ redirectTo = '/', className, children }: LoginButtonProps) {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   const handleGoogleLogin = async () => {
     try {

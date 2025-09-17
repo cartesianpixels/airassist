@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase';
-import type { ApiUsageLogInsert } from '@/lib/supabase-typed';
+import { insertUsageLog, supabase, type ApiUsageLogInsert } from '@/lib/supabase-typed';
 
 export interface UsageData {
   sessionId?: string;
@@ -19,8 +18,6 @@ export interface UsageData {
 
 export async function trackUsage(data: UsageData): Promise<boolean> {
   try {
-    const supabase = createClient();
-
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -45,15 +42,7 @@ export async function trackUsage(data: UsageData): Promise<boolean> {
       error_message: data.errorMessage || null,
     };
 
-    const { error: insertError } = await supabase
-      .from('api_usage_logs')
-      .insert(usageLogData);
-
-    if (insertError) {
-      console.error('Failed to insert usage log:', insertError);
-      return false;
-    }
-
+    await insertUsageLog(usageLogData);
     return true;
   } catch (error) {
     console.error('Error tracking usage:', error);
