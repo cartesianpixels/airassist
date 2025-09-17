@@ -21,6 +21,10 @@ export function LoginButton({ redirectTo = '/', className, children }: LoginButt
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         },
       });
 

@@ -113,10 +113,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!profiles || profiles.length === 0) {
+          console.log('No profile found, attempting to create one for user:', userId);
+
+          // First try using the database function (if available)
+          try {
+            const { data: funcResult, error: funcError } = await supabase.rpc('create_user_profile', {
+              user_id: userId,
+              user_email: user?.email || '',
+              user_name: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
+              avatar_url: user?.user_metadata?.avatar_url || null
+            });
+
+            if (!funcError && funcResult) {
+              console.log('Profile created via database function:', funcResult);
+              setProfile(funcResult as Profile);
+              setProfileLoading(false);
+              return funcResult as Profile;
+            }
+
+            console.log('Database function not available or failed, trying direct insert');
+          } catch (funcErr) {
+            console.log('Database function error, falling back to direct insert:', funcErr);
+          }
+
+          // Fallback to direct insert
           const defaultProfile: Partial<Profile> = {
             id: userId,
             email: user?.email || '',
-            full_name: user?.user_metadata?.full_name || null,
+            full_name: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
             avatar_url: user?.user_metadata?.avatar_url || null,
             tier: 'free',
             role: 'user',
@@ -135,11 +159,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (createError) {
-            console.error('Error creating profile:', createError);
+            console.error('Direct insert failed, trying API endpoint as final fallback');
+            console.error('Error details:', {
+              code: createError.code,
+              message: createError.message,
+              hint: createError.hint,
+              details: createError.details
+            });
+
+            // Final fallback: use API endpoint with service role permissions
+            try {
+              const response = await fetch('/api/auth/create-profile', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: userId,
+                  email: user?.email || '',
+                  fullName: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
+                  avatarUrl: user?.user_metadata?.avatar_url || null
+                }),
+              });
+
+              if (response.ok) {
+                const { profile } = await response.json();
+                console.log('Profile created via API endpoint:', profile);
+                setProfile(profile as Profile);
+                setProfileLoading(false);
+                return profile as Profile;
+              }
+
+              console.error('API endpoint also failed:', await response.text());
+            } catch (apiError) {
+              console.error('API endpoint error:', apiError);
+            }
+
+            // All methods failed - continue without profile for now
+            console.warn('All profile creation methods failed - user can complete setup later');
             setProfileLoading(false);
             return null;
           }
 
+          console.log('Profile created via direct insert:', newProfile);
           setProfile(newProfile as Profile);
           setProfileLoading(false);
           return newProfile as Profile;
