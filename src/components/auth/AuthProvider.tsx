@@ -159,44 +159,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (createError) {
-            console.error('Direct insert failed, trying API endpoint as final fallback');
-            console.error('Error details:', {
+            console.error('Profile creation failed:', {
               code: createError.code,
               message: createError.message,
               hint: createError.hint,
               details: createError.details
             });
 
-            // Final fallback: use API endpoint with service role permissions
-            try {
-              const response = await fetch('/api/auth/create-profile', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userId: userId,
-                  email: user?.email || '',
-                  fullName: user?.user_metadata?.full_name || user?.user_metadata?.name || null,
-                  avatarUrl: user?.user_metadata?.avatar_url || null
-                }),
-              });
-
-              if (response.ok) {
-                const { profile } = await response.json();
-                console.log('Profile created via API endpoint:', profile);
-                setProfile(profile as Profile);
-                setProfileLoading(false);
-                return profile as Profile;
-              }
-
-              console.error('API endpoint also failed:', await response.text());
-            } catch (apiError) {
-              console.error('API endpoint error:', apiError);
-            }
-
-            // All methods failed - continue without profile for now
-            console.warn('All profile creation methods failed - user can complete setup later');
+            console.warn('Profile creation failed - user can complete setup later');
             setProfileLoading(false);
             return null;
           }
