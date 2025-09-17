@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -457,9 +457,5 @@ function SettingsPage() {
 }
 
 export default function SettingsPageWithAuth() {
-  return (
-    <AuthProvider>
-      <SettingsPage />
-    </AuthProvider>
-  );
+  return <SettingsPage />;
 }

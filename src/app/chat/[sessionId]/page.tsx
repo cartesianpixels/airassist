@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
 import { ThinkingIndicator } from "@/components/thinking-indicator";
-import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { AppHeader } from "@/components/app-header";
 import { ModernSidebar } from "@/components/modern-sidebar";
@@ -378,9 +378,5 @@ function ChatSessionPage() {
 }
 
 export default function ChatSessionPageWithAuth() {
-  return (
-    <AuthProvider>
-      <ChatSessionPage />
-    </AuthProvider>
-  );
+  return <ChatSessionPage />;
 }

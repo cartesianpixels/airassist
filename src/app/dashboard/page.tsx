@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { AppHeader } from "@/components/app-header";
 import { ModernSidebar } from "@/components/modern-sidebar";
@@ -129,192 +129,267 @@ function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
         >
-          {/* Welcome Section */}
-          <div className="text-center space-y-4">
-            <h2 className="text-3xl font-bold text-foreground">
-              Welcome back, {user.user_metadata?.full_name || user.email?.split('@')[0]}!
-            </h2>
-            <p className="text-foreground-secondary max-w-2xl mx-auto">
-              Track your ATC training progress, review chat history, and manage your learning journey.
-            </p>
+          {/* Hero Section with Prominent Chat Start */}
+          <div className="relative">
+            {/* Background Glow Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-blue-500/10 rounded-3xl blur-3xl"></div>
+
+            <div className="relative bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-slate-900/80 dark:via-slate-800/60 dark:to-slate-700/40 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-3xl p-8 md:p-12">
+              <div className="text-center space-y-6">
+                <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-full border border-emerald-500/30 dark:border-emerald-400/30">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">AirAssist Dashboard</span>
+                </div>
+
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-slate-100 dark:via-slate-300 dark:to-slate-100 bg-clip-text text-transparent leading-tight">
+                  Welcome back,<br />
+                  <span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+                    {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                  </span>
+                </h1>
+
+                <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                  Ready to practice ATC procedures? Start a new conversation or continue from where you left off.
+                </p>
+
+                {/* Primary CTA */}
+                <motion.div
+                  className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const { createChatSession } = await import('@/lib/database-supabase');
+                        const sessionId = await createChatSession("New Chat Session", user.id);
+                        router.push(`/chat/${sessionId}`);
+                      } catch (error) {
+                        console.error('Error creating session:', error);
+                      }
+                    }}
+                    className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0"
+                    size="lg"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                    <div className="relative flex items-center gap-3">
+                      <MessageSquare className="w-5 h-5" />
+                      Start New Chat Session
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="px-8 py-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 text-slate-700 dark:text-slate-200 font-medium rounded-2xl transition-all duration-300"
+                    onClick={() => {
+                      const sessionsSection = document.getElementById('recent-sessions');
+                      sessionsSection?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    View Recent Chats
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Modern Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="glass border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalSessions}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalMessages} total messages
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="glass border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">This Week</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">+{Math.min(totalSessions, 12)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    New conversations
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              className="group relative"
             >
-              <Card className="glass border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average Session</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {totalSessions > 0 ? Math.round(totalMessages / totalSessions) : 0}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative p-6 bg-gradient-to-br from-white/90 to-emerald-50/50 dark:from-slate-800/90 dark:to-emerald-900/20 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-500/30 rounded-2xl hover:border-emerald-400/50 transition-all duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg">
+                    <MessageSquare className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Messages per conversation
-                  </p>
-                </CardContent>
-              </Card>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{totalSessions}</div>
+                    <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Total Conversations</div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  {totalMessages} total messages exchanged
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="group relative"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative p-6 bg-gradient-to-br from-white/90 to-cyan-50/50 dark:from-slate-800/90 dark:to-cyan-900/20 backdrop-blur-sm border border-cyan-200/50 dark:border-cyan-500/30 rounded-2xl hover:border-cyan-400/50 transition-all duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl shadow-lg">
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-cyan-700 dark:text-cyan-300">+{Math.min(totalSessions, 12)}</div>
+                    <div className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">This Week</div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  New conversations started
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="group relative"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative p-6 bg-gradient-to-br from-white/90 to-blue-50/50 dark:from-slate-800/90 dark:to-blue-900/20 backdrop-blur-sm border border-blue-200/50 dark:border-blue-500/30 rounded-2xl hover:border-blue-400/50 transition-all duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                      {totalSessions > 0 ? Math.round(totalMessages / totalSessions) : 0}
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Avg. Session</div>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  Messages per conversation
+                </div>
+              </div>
             </motion.div>
           </div>
 
-          {/* Recent Sessions */}
+          {/* Recent Sessions - Modern Design */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-slate-200/60 dark:border-slate-700/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Recent Conversations
-                </CardTitle>
-                <CardDescription>
-                  Your latest ATC training sessions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {recentSessions.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentSessions.map((session, index) => (
-                      <motion.div
-                        key={session.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 + index * 0.1 }}
-                        className="flex items-center justify-between p-3 rounded-lg glass border-border/30 hover:border-border/60 hover-lift transition-all duration-300 cursor-pointer"
-                        onClick={() => router.push(`/chat/${session.id}`)}
-                      >
-                        <div className="space-y-1">
-                          <h4 className="font-medium text-foreground">
-                            {session.title}
-                          </h4>
-                          <p className="text-sm text-foreground-secondary">
-                            {session.message_count} messages • {new Date(session.updated_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          Open
-                        </Button>
-                      </motion.div>
-                    ))}
-                    
-                    {sessions.length > 5 && (
-                      <div className="text-center pt-4">
-                        <Button variant="outline" onClick={() => router.push('/chat')}>
-                          View All Conversations ({sessions.length})
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 gradient-brand rounded-full flex items-center justify-center mx-auto mb-4 shadow-brand">
-                      <MessageSquare className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-2">
-                      No conversations yet
-                    </h3>
-                    <p className="text-foreground-secondary mb-4">
-                      Start your first ATC training conversation
-                    </p>
-                    <Button onClick={() => router.push('/chat')}>
-                      Start New Chat
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Actions */}
-          <motion.div
+            id="recent-sessions"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="relative"
           >
-            <Card className="glass-strong border-brand-primary/30 hover-lift">
-              <CardHeader>
-                <CardTitle className="text-brand-primary">Quick Start</CardTitle>
-                <CardDescription className="text-foreground-secondary">
-                  Jump into ATC training
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => router.push('/chat')}
-                  className="w-full gradient-brand text-white shadow-brand hover:shadow-glow transition-all duration-300"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  New Training Session
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Recent Conversations</h2>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Continue where you left off</p>
+                </div>
+              </div>
+            </div>
 
-            <Card className="glass-strong border-brand-secondary/30 hover-lift">
-              <CardHeader>
-                <CardTitle className="text-brand-secondary">Settings</CardTitle>
-                <CardDescription className="text-foreground-secondary">
-                  Customize your experience
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            {recentSessions.length > 0 ? (
+              <div className="grid gap-4">
+                {recentSessions.map((session, index) => (
+                  <motion.div
+                    key={session.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
+                    className="group relative cursor-pointer"
+                    onClick={() => router.push(`/chat/${session.id}`)}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="relative p-6 bg-gradient-to-br from-white/90 to-slate-50/50 dark:from-slate-800/90 dark:to-slate-700/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-600/50 rounded-2xl hover:border-indigo-400/50 dark:hover:border-indigo-500/50 transition-all duration-300 hover:shadow-xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <MessageSquare className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {session.title}
+                            </h3>
+                            <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                {session.message_count} messages
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(session.updated_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium rounded-xl">
+                            Continue →
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {sessions.length > 5 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1.0 }}
+                    className="text-center pt-6"
+                  >
+                    <Button
+                      variant="outline"
+                      className="px-6 py-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-2 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 text-slate-700 dark:text-slate-200 rounded-xl transition-all duration-300"
+                    >
+                      View All {sessions.length} Conversations
+                    </Button>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7 }}
+                className="text-center py-16"
+              >
+                <div className="relative mb-8">
+                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+                    <MessageSquare className="w-12 h-12 text-white" />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-600/20 rounded-full blur-2xl"></div>
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+                  Ready to start chatting?
+                </h3>
+                <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
+                  Begin your first ATC conversation and practice real-world scenarios
+                </p>
                 <Button
-                  variant="outline"
-                  onClick={() => router.push('/settings')}
-                  className="w-full glass border-brand-secondary/50 text-brand-secondary hover:bg-brand-secondary/10 hover:border-brand-secondary transition-all duration-300"
+                  onClick={async () => {
+                    try {
+                      const { createChatSession } = await import('@/lib/database-supabase');
+                      const sessionId = await createChatSession("New Chat Session", user.id);
+                      router.push(`/chat/${sessionId}`);
+                    } catch (error) {
+                      console.error('Error creating session:', error);
+                    }
+                  }}
+                  className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                  size="lg"
                 >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Manage Preferences
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Start Your First Chat
                 </Button>
-              </CardContent>
-            </Card>
+              </motion.div>
+            )}
           </motion.div>
+
         </motion.div>
       </div>
     </div>
@@ -322,9 +397,5 @@ function DashboardPage() {
 }
 
 export default function DashboardPageWithAuth() {
-  return (
-    <AuthProvider>
-      <DashboardPage />
-    </AuthProvider>
-  );
+  return <DashboardPage />;
 }

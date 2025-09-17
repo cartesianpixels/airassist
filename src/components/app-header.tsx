@@ -103,88 +103,8 @@ export function AppHeader({
 
         {/* Right: Actions + User Menu */}
         <div className="flex items-center gap-2">
-          {/* Quick Actions */}
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateTo("/chat")}
-              className="text-foreground-secondary hover:text-brand-primary hidden sm:flex"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              New Chat
-            </Button>
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateTo("/dashboard")}
-              className="text-foreground-secondary hover:text-brand-primary hidden sm:flex"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-          </motion.div>
-
           {/* Theme Switcher */}
           <ThemeSwitcher />
-
-          {/* User Menu */}
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-10 h-10 rounded-full glass hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-primary"
-                  >
-                    <div className="w-8 h-8 gradient-brand rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                  </Button>
-                </motion.div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-56 glass-strong border-border/50 shadow-xl"
-              >
-                <div className="px-3 py-2">
-                  <p className="text-sm font-medium text-foreground">
-                    {user.user_metadata?.full_name || user.email?.split("@")[0]}
-                  </p>
-                  <p className="text-xs text-foreground-muted truncate">
-                    {user.email}
-                  </p>
-                </div>
-                <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem
-                  onClick={() => navigateTo("/dashboard")}
-                  className="text-foreground hover:text-brand-primary"
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigateTo("/settings")}
-                  className="text-foreground hover:text-brand-primary"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/50" />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="text-error hover:text-error focus:text-error"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </div>
     </motion.header>

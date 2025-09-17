@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { Button } from "@/components/ui/button";
 import { Sparkles, MessageSquare, BarChart3, Settings } from "lucide-react";
@@ -197,9 +197,5 @@ function HomePage() {
 }
 
 export default function Home() {
-  return (
-    <AuthProvider>
-      <HomePage />
-    </AuthProvider>
-  );
+  return <HomePage />;
 }

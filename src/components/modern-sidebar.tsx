@@ -79,12 +79,15 @@ export function ModernSidebar({
     );
   }, [sessions, searchQuery]);
 
-  const handleNewChat = () => {
-    startNewChat();
-    if (onSessionSelect) {
-      onSessionSelect("new");
+  const handleNewChat = async () => {
+    try {
+      const { createChatSession } = await import('@/lib/database-supabase');
+      const sessionId = await createChatSession("New Chat Session", user.id);
+      router.push(`/chat/${sessionId}`);
+      onClose();
+    } catch (error) {
+      console.error('Error creating session:', error);
     }
-    onClose();
   };
 
   const handleSessionClick = (sessionId: string) => {
@@ -132,9 +135,16 @@ export function ModernSidebar({
     return date.toLocaleDateString();
   };
 
+  const { signOut } = useAuth();
+
   const handleLogout = async () => {
-    // Add logout logic here
-    router.push("/");
+    try {
+      await signOut();
+      router.push("/");
+      onClose();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   if (!user) return null;
@@ -160,9 +170,11 @@ export function ModernSidebar({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed left-0 top-0 h-full w-80 z-50 flex flex-col"
           >
-            <div className="glass-strong h-full border-r border-border/50 shadow-xl">
-              {/* Header */}
-              <div className="p-6 border-b border-border/50">
+            <div className="glass-strong h-full border-r border-border/50 shadow-xl flex flex-col">
+              {/* Top Content */}
+              <div className="flex-1 flex flex-col">
+                {/* Header */}
+                <div className="p-6 border-b border-border/50">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <motion.div
@@ -364,6 +376,7 @@ export function ModernSidebar({
                   )}
                 </div>
               </ScrollArea>
+              </div>
 
               {/* Footer */}
               <div className="p-4 border-t border-border/50">
