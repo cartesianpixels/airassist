@@ -3,6 +3,16 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { supabaseSemanticSearch } from '@/lib/database-supabase';
 import { createClient } from '@/lib/supabase-server';
+import { 
+  estimateMessagesTokenCount, 
+  calculateCost, 
+  extractTokenUsageFromResponse,
+  StreamingTokenTracker,
+  validateTokenLimits,
+  getOptimalModel,
+  type TokenUsage 
+} from '@/lib/token-counter';
+import { analytics, checkRateLimit, trackApiCall } from '@/lib/analytics';
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
@@ -10,7 +20,10 @@ const MessageSchema = z.object({
 });
 
 const RequestSchema = z.object({
-  messages: z.array(MessageSchema)
+  messages: z.array(MessageSchema),
+  model: z.string().optional(),
+  sessionId: z.string().optional(),
+  maxTokens: z.number().optional(),
 });
 
 const openai = new OpenAI({
@@ -50,6 +63,7 @@ Content: ${truncatedText}
 
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
   console.log(`[${requestId}] Starting OpenAI chat request`);
 
   try {
@@ -68,10 +82,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check rate limiting
+    const rateLimitCheck = await checkRateLimit(user.id);
+    if (!rateLimitCheck.allowed) {
+      console.log(`[${requestId}] Rate limit exceeded for user ${user.id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded',
+          remaining: rateLimitCheck.remaining,
+          resetTime: rateLimitCheck.resetTime,
+        }),
+        {
+          status: 429,
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-RateLimit-Remaining': rateLimitCheck.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitCheck.resetTime,
+          }
+        }
+      );
+    }
+
     const body = await request.json();
-    const { messages } = RequestSchema.parse(body);
+    const { messages, model: requestedModel, sessionId, maxTokens = 1500 } = RequestSchema.parse(body);
 
     console.log(`[${requestId}] Processing ${messages.length} messages for user ${user.id}`);
+
+    // Get user profile to determine tier and preferences
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tier, role')
+      .eq('id', user.id)
+      .single();
+
+    const userTier = profile?.tier || 'free';
+
+    // Estimate token count for input
+    const estimatedInputTokens = estimateMessagesTokenCount(messages);
+    
+    // Determine optimal model
+    const modelToUse = requestedModel || getOptimalModel(estimatedInputTokens, userTier, 'medium');
+    
+    // Validate token limits
+    const validation = validateTokenLimits(estimatedInputTokens, modelToUse, maxTokens);
+    if (!validation.valid) {
+      console.log(`[${requestId}] Token limit validation failed: ${validation.reason}`);
+      return new Response(
+        JSON.stringify({ error: validation.reason }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log(`[${requestId}] Using model: ${modelToUse}, estimated input tokens: ${estimatedInputTokens}`);
 
     const lastMessage = messages[messages.length - 1]?.content || '';
 
@@ -104,11 +169,16 @@ Answer the user's question based on this knowledge.`
 
     console.log(`[${requestId}] Calling OpenAI API...`);
 
+    // Initialize token tracker for streaming
+    const tokenTracker = new StreamingTokenTracker(estimatedInputTokens);
+    let totalContent = '';
+    let responseStartTime = Date.now();
+
     const stream = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Use cheaper, faster model with larger context
+      model: modelToUse,
       messages: openaiMessages,
       temperature: 0.7,
-      max_tokens: 1500, // Reduced to save context space
+      max_tokens: maxTokens,
       stream: true,
     });
 
@@ -122,16 +192,65 @@ Answer the user's question based on this knowledge.`
           for await (const chunk of stream) {
             const content = chunk.choices[0]?.delta?.content || '';
             if (content) {
+              totalContent += content;
+              tokenTracker.addContent(content);
+              
               const data = `data: ${JSON.stringify(chunk)}\n\n`;
               controller.enqueue(encoder.encode(data));
             }
           }
 
+          // Calculate final metrics
+          const responseTime = Date.now() - responseStartTime;
+          const finalTokenUsage = tokenTracker.getUsage();
+          const finalCost = tokenTracker.getCost(modelToUse);
+
+          console.log(`[${requestId}] Stream completed - Tokens: ${finalTokenUsage.totalTokens}, Cost: $${finalCost.totalCost.toFixed(6)}, Time: ${responseTime}ms`);
+
+          // Track analytics and usage (async, don't block response)
+          Promise.all([
+            // Track API usage
+            trackApiCall(
+              user.id,
+              '/api/chat',
+              startTime,
+              {
+                prompt: finalTokenUsage.promptTokens,
+                completion: finalTokenUsage.completionTokens,
+                total: finalTokenUsage.totalTokens,
+              },
+              finalCost.totalCost,
+              modelToUse
+            ),
+            // Track response received event
+            analytics.trackResponseReceived(user.id, sessionId || 'unknown', {
+              model: modelToUse,
+              tokenCount: finalTokenUsage.totalTokens,
+              responseTime,
+              cost: finalCost.totalCost,
+            }),
+            // Increment daily usage
+            analytics.incrementDailyUsage(user.id),
+          ]).catch(error => {
+            console.error(`[${requestId}] Error tracking analytics:`, error);
+          });
+
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
-          console.log(`[${requestId}] Stream completed`);
         } catch (error) {
           console.error(`[${requestId}] Stream error:`, error);
+          
+          // Track error
+          trackApiCall(
+            user.id,
+            '/api/chat',
+            startTime,
+            undefined,
+            undefined,
+            modelToUse,
+            error instanceof Error ? error.message : 'Unknown error'
+          ).catch(console.error);
+          
           controller.error(error);
         }
       }
@@ -142,11 +261,28 @@ Answer the user's question based on this knowledge.`
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-Model-Used': modelToUse,
+        'X-Estimated-Tokens': estimatedInputTokens.toString(),
+        'X-RateLimit-Remaining': rateLimitCheck.remaining.toString(),
       },
     });
 
   } catch (error) {
     console.error(`[${requestId}] API route error:`, error);
+    
+    // Track error in analytics
+    if (user?.id) {
+      trackApiCall(
+        user.id,
+        '/api/chat',
+        startTime,
+        undefined,
+        undefined,
+        undefined,
+        error instanceof Error ? error.message : 'Unknown error'
+      ).catch(console.error);
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Request failed',
@@ -154,7 +290,7 @@ Answer the user's question based on this knowledge.`
         requestId
       }),
       {
-        status: 400,
+        status: 500,
         headers: { 'Content-Type': 'application/json' }
       }
     );

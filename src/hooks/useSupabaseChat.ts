@@ -28,14 +28,18 @@ export function useSupabaseChat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadChatSessions = useCallback(async () => {
+  const loadChatSessions = useCallback(async (limit: number = 20, offset: number = 0, append: boolean = false) => {
     if (!user) return;
 
     try {
       setLoading(true);
       setError(null);
-      const sessionsData = await getUserChatSessions(user.id);
-      setSessions(sessionsData);
+      const sessionsData = await getUserChatSessions(user.id, limit, offset);
+      if (append) {
+        setSessions(prev => [...prev, ...sessionsData]);
+      } else {
+        setSessions(sessionsData);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load chat sessions');
     } finally {
@@ -73,6 +77,8 @@ export function useSupabaseChat() {
     try {
       setError(null);
       const sessionId = await createChatSession(title, user.id);
+      setCurrentSessionId(sessionId); // Set the current session ID
+      setMessages([]); // Clear messages for new session
       await loadChatSessions(); // Refresh sessions list
       return sessionId;
     } catch (err) {

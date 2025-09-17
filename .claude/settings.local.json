@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

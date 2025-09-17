@@ -81,17 +81,23 @@ export async function supabaseSemanticSearch(
 export async function createChatSession(title: string, userId: string): Promise<string> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.rpc('create_chat_session', {
-    session_title: title,
-    user_id: userId,
-  } as any);
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .insert({
+      user_id: userId,
+      title: title,
+      archived: false,
+      metadata: {}
+    })
+    .select('id')
+    .single();
 
   if (error) {
     console.error('Error creating chat session:', error);
     throw error;
   }
 
-  return data;
+  return data.id;
 }
 
 export async function addMessageToSession(
@@ -103,45 +109,92 @@ export async function addMessageToSession(
 ): Promise<string> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.rpc('add_message_to_session', {
-    session_id: sessionId,
-    user_id: userId,
-    message_role: role,
-    message_content: content,
-    message_resources: resources || null,
-  } as any);
+  // First verify the session exists (RLS will ensure user owns it)
+  const { data: sessionData, error: sessionError } = await supabase
+    .from('chat_sessions')
+    .select('id')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessionError || !sessionData) {
+    console.error('Session not found or access denied:', { sessionId, userId, sessionError });
+    throw new Error(`Session not found or access denied. Session ID: ${sessionId}`);
+  }
+
+  // Insert the message with user_id (required by database schema)
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      chat_session_id: sessionId,
+      user_id: userId,
+      role: role,
+      content: content,
+      resources: resources || null,
+      metadata: {},
+    })
+    .select('id')
+    .single();
 
   if (error) {
     console.error('Error adding message to session:', error);
     throw error;
   }
 
-  return data;
+  return data.id;
 }
 
-export async function getUserChatSessions(userId: string) {
+export async function getUserChatSessions(userId: string, limit: number = 20, offset: number = 0) {
   const supabase = createClient();
 
-  const { data, error } = await supabase.rpc('get_user_chat_sessions', {
-    user_id: userId,
-  } as any);
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select(`
+      id,
+      title,
+      created_at,
+      updated_at,
+      archived,
+      messages!inner(id)
+    `)
+    .eq('user_id', userId)
+    .eq('archived', false)
+    .order('updated_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     console.error('Error getting user chat sessions:', error);
     throw error;
   }
 
-  return data || [];
+  // Transform data to include message count
+  const sessions = (data || []).map(session => ({
+    ...session,
+    message_count: session.messages?.length || 0,
+    last_message_at: session.updated_at
+  }));
+
+  return sessions;
 }
 
 export async function getChatSessionMessages(sessionId: string, userId: string) {
   const supabase = createClient();
 
+  // First verify the session exists (RLS will ensure user owns it)
+  const { data: sessionData, error: sessionError } = await supabase
+    .from('chat_sessions')
+    .select('id')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessionError || !sessionData) {
+    console.error('Session not found or access denied:', { sessionId, userId, sessionError });
+    throw new Error(`Session not found or access denied. Session ID: ${sessionId}`);
+  }
+
   const { data, error } = await supabase
     .from('messages')
     .select('*')
     .eq('chat_session_id', sessionId)
-    .eq('user_id', userId)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -158,8 +211,7 @@ export async function updateChatSessionTitle(sessionId: string, userId: string, 
   const { error } = await (supabase as any)
     .from('chat_sessions')
     .update({ title })
-    .eq('id', sessionId)
-    .eq('user_id', userId);
+    .eq('id', sessionId);
 
   if (error) {
     console.error('Error updating chat session title:', error);
@@ -173,8 +225,7 @@ export async function deleteChatSession(sessionId: string, userId: string) {
   const { error } = await supabase
     .from('chat_sessions')
     .delete()
-    .eq('id', sessionId)
-    .eq('user_id', userId);
+    .eq('id', sessionId);
 
   if (error) {
     console.error('Error deleting chat session:', error);
