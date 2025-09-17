@@ -154,7 +154,8 @@ function DashboardPage() {
       // Check if user just completed onboarding (created within last 24 hours and has no sessions)
       const accountAge = Date.now() - new Date(profile.created_at).getTime();
       const isNewAccount = accountAge < 24 * 60 * 60 * 1000; // 24 hours
-      setIsNewUser(isNewAccount && sessions.length === 0);
+      const newUserStatus = isNewAccount && sessions.length === 0;
+      setIsNewUser(newUserStatus);
     }
   }, [profile, sessions]);
 
@@ -301,12 +302,16 @@ function DashboardPage() {
                 >
                   <Button
                     onClick={async () => {
+                      console.log('New chat button clicked');
                       try {
                         const { createChatSession } = await import('@/lib/database-supabase');
+                        console.log('About to create session for user:', user.id);
                         const sessionId = await createChatSession("New Chat Session", user.id);
+                        console.log('Session created:', sessionId);
                         router.push(`/chat/${sessionId}`);
                       } catch (error) {
                         console.error('Error creating session:', error);
+                        alert('Error creating chat session: ' + (error instanceof Error ? error.message : 'Unknown error'));
                       }
                     }}
                     className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0"

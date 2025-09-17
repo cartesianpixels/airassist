@@ -11,7 +11,9 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
   const [shouldRedirect, setShouldRedirect] = React.useState(false);
 
   React.useEffect(() => {
-    if (loading || profileLoading) return;
+    if (loading || profileLoading) {
+      return;
+    }
 
     // Skip onboarding check for auth-related pages
     if (

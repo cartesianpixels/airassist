@@ -47,26 +47,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call OpenAI
+    // Call OpenAI with streaming
     const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model,
       messages,
       max_tokens: 2000,
       temperature: 0.7,
+      stream: true,
     });
 
-    const responseTime = Date.now() - startTime;
-    const response = completion.choices[0]?.message?.content || '';
-    const usage = completion.usage;
+    // Create a streaming response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let totalTokens = 0;
+          let promptTokens = 0;
+          let completionTokens = 0;
 
-    // Usage tracking will be handled client-side or via middleware
+          for await (const chunk of completion) {
+            const delta = chunk.choices?.[0]?.delta;
 
-    return NextResponse.json({
-      response,
-      usage,
-      model,
-      responseTime,
+            if (delta?.content) {
+              const data = JSON.stringify({
+                choices: [{
+                  delta: {
+                    content: delta.content
+                  }
+                }]
+              });
+
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
+
+            // Track token usage if available
+            if (chunk.usage) {
+              totalTokens = chunk.usage.total_tokens || 0;
+              promptTokens = chunk.usage.prompt_tokens || 0;
+              completionTokens = chunk.usage.completion_tokens || 0;
+            }
+          }
+
+          // Send completion signal
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+
+          // Log usage for analytics (optional)
+          const responseTime = Date.now() - startTime;
+          console.log(`Chat completed: ${model}, ${totalTokens} tokens, ${responseTime}ms`);
+
+          controller.close();
+        } catch (error) {
+          console.error('Streaming error:', error);
+          controller.error(error);
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
 
   } catch (error) {

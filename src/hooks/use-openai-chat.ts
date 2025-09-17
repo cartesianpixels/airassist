@@ -105,7 +105,7 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
       options.onError?.(errorMessage);
       throw error;
     }
-  }, [options]);
+  }, [options.onChunk, options.onComplete, options.onError]);
 
   const reset = useCallback(() => {
     setStreamingState({

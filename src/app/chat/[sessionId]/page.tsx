@@ -57,10 +57,10 @@ function ChatSessionPage() {
 
   const { streamingState, sendMessage, reset } = useOpenAIChat({
     onChunk: (chunk) => {
-      console.log('Chunk received:', chunk.substring(0, 50));
+      // Real-time content updates are handled by the streamingState.currentContent
+      // which is used in the render logic below
     },
     onComplete: (finalContent, messageId) => {
-      console.log('Streaming complete, final content:', finalContent?.substring(0, 100) + '...');
       setIsThinking(false);
       handleStreamingComplete(finalContent, messageId);
     },
@@ -152,6 +152,16 @@ function ChatSessionPage() {
         id: newStreamingId,
         role: "assistant" as const,
         content: "",
+        chat_session_id: currentSessionId,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        model_used: null,
+        prompt_tokens: null,
+        completion_tokens: null,
+        total_tokens: null,
+        cost: null,
+        resources: null,
       };
 
       setSupabaseMessages(prev => [...prev, assistantMessage as any]);
