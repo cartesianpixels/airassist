@@ -25,6 +25,7 @@ export function SearchLogsIndicator({
 }: SearchLogsIndicatorProps) {
   const [logs, setLogs] = React.useState<SearchLog[]>([]);
   const [currentStep, setCurrentStep] = React.useState(0);
+  const [sessionId] = React.useState(() => Math.random().toString(36).substring(2, 15));
 
   // Simulate the search process logs based on what we see in server logs
   const searchSteps = React.useMemo(() => [
@@ -84,6 +85,10 @@ export function SearchLogsIndicator({
     }
   ], [searchQuery]);
 
+  // Use ref to store onComplete to avoid effect re-runs
+  const onCompleteRef = React.useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   React.useEffect(() => {
     if (!isVisible) {
       setLogs([]);
@@ -91,10 +96,12 @@ export function SearchLogsIndicator({
       return;
     }
 
+    const timeouts: NodeJS.Timeout[] = [];
+
     const addLog = (step: typeof searchSteps[0], index: number) => {
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         const newLog: SearchLog = {
-          id: `log-${Date.now()}-${index}`,
+          id: `log-${sessionId}-${index}-${Date.now()}`,
           message: step.message,
           type: step.type,
           timestamp: Date.now(),
@@ -106,11 +113,14 @@ export function SearchLogsIndicator({
 
         // Call onComplete when finished
         if (index === searchSteps.length - 1) {
-          setTimeout(() => {
-            onComplete?.();
+          const completeTimeout = setTimeout(() => {
+            onCompleteRef.current?.();
           }, 1000);
+          timeouts.push(completeTimeout);
         }
       }, step.delay);
+
+      timeouts.push(timeout);
     };
 
     // Add each log with timing
@@ -118,12 +128,13 @@ export function SearchLogsIndicator({
       addLog(step, index);
     });
 
-    // Cleanup function
+    // Cleanup function - clear all timeouts
     return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
       setLogs([]);
       setCurrentStep(0);
     };
-  }, [isVisible, searchSteps, onComplete]);
+  }, [isVisible, searchSteps, sessionId]);
 
   const getIcon = (type: SearchLog['type']) => {
     switch (type) {

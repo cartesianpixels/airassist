@@ -10,7 +10,7 @@ import type { Message } from "@/lib/supabase-typed";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { SourcesList } from "@/components/references";
+import { EnhancedSourcesList } from "@/components/references";
 
 interface ChatMessageProps {
   message: Message;
@@ -115,14 +115,19 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
               )}
             </div>
 
-            {/* Sources section */}
+            {/* Enhanced Sources section */}
             {!isStreaming && message.resources && message.resources.length > 0 && (
               <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 bg-slate-50/30 dark:bg-slate-900/30">
-                <SourcesList
+                <EnhancedSourcesList
                   sources={message.resources}
                   title="Sources & References"
                   variant="collapsible"
-                  groupByType={true}
+                  groupByTopic={true}
+                  showSimilarity={true}
+                  showContent={false}
+                  maxSources={15}
+                  sortBy="similarity"
+                  sortOrder="desc"
                 />
               </div>
             )}
