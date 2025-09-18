@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatForm } from "@/components/chat-form";
 import { ThinkingIndicator } from "@/components/thinking-indicator";
+import { SearchLogsIndicator } from "@/components/search-logs-indicator";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { AppHeader } from "@/components/app-header";
@@ -30,6 +31,8 @@ function ChatSessionPage() {
   const [streamingMessageId, setStreamingMessageId] = React.useState<string | null>(null);
   const [promptSent, setPromptSent] = React.useState(false);
   const [currentThinkingMessage, setCurrentThinkingMessage] = React.useState<string>('');
+  const [showSearchLogs, setShowSearchLogs] = React.useState(false);
+  const [currentSearchQuery, setCurrentSearchQuery] = React.useState<string>('');
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -64,12 +67,14 @@ function ChatSessionPage() {
     onComplete: (finalContent, sources, messageId) => {
       setIsThinking(false);
       setCurrentThinkingMessage('');
+      setShowSearchLogs(false);
       handleStreamingComplete(finalContent, sources, messageId);
     },
     onError: (error) => {
       console.error('Streaming error:', error);
       setIsThinking(false);
       setCurrentThinkingMessage('');
+      setShowSearchLogs(false);
       setStreamingMessageId(null);
       if (streamingMessageId) {
         setSupabaseMessages(prev => prev.filter(m => m.id !== streamingMessageId));
@@ -77,6 +82,10 @@ function ChatSessionPage() {
     },
     onThinking: (message) => {
       setCurrentThinkingMessage(message);
+      // Show search logs when thinking starts (search process begins)
+      if (message.includes('Searching') || message.includes('Processing') || message.includes('query')) {
+        setShowSearchLogs(true);
+      }
     }
   });
 
@@ -147,8 +156,10 @@ function ChatSessionPage() {
       // Add user message to Supabase
       await addMessage(currentSessionId, 'user', input.trim());
 
-      // Show thinking indicator
+      // Show thinking indicator and prepare search logs
       setIsThinking(true);
+      setCurrentSearchQuery(input.trim());
+      setShowSearchLogs(true);
 
       // Create streaming message placeholder
       const newStreamingId = String(Date.now());
@@ -484,6 +495,13 @@ function ChatSessionPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Search Logs Indicator - positioned on the right side */}
+      <SearchLogsIndicator
+        isVisible={showSearchLogs}
+        searchQuery={currentSearchQuery}
+        onComplete={() => setShowSearchLogs(false)}
+      />
     </div>
   );
 }
