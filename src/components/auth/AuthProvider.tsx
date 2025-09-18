@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, type Profile } from '@/lib/supabase-typed';
 
@@ -250,6 +250,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile?.onboarding_completed ||
     profile?.metadata?.onboarding_completed
   );
+
+  // Debug onboarding status
+  React.useEffect(() => {
+    if (profile) {
+      console.log('🔍 ONBOARDING STATUS CHECK:', {
+        profileOnboarding: profile.onboarding_completed,
+        metadataOnboarding: profile.metadata?.onboarding_completed,
+        hasCompletedOnboarding,
+        fullProfile: profile
+      });
+    }
+  }, [profile, hasCompletedOnboarding]);
 
   const userTier = profile?.tier || 'free';
 

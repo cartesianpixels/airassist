@@ -32,6 +32,7 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
       pathname === '/api'
     ) {
       console.log('🚫 Skipping onboarding check for protected path:', pathname);
+      setShouldRedirect(false); // Ensure we don't redirect
       return;
     }
 
@@ -65,5 +66,6 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
     );
   }
 
+  console.log('✅ RENDERING CHILDREN - shouldRedirect:', shouldRedirect);
   return <>{children}</>;
 }
