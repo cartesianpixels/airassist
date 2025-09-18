@@ -42,6 +42,13 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
   const { toast } = useToast();
   const isUser = message.role === "user";
 
+  // Debug: Log resources to console
+  React.useEffect(() => {
+    if (!isUser && message.resources) {
+      console.log('📚 Message has resources:', message.resources.length, message.resources);
+    }
+  }, [message.resources, isUser]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
@@ -116,19 +123,25 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
             </div>
 
             {/* Enhanced Sources section */}
-            {!isStreaming && message.resources && message.resources.length > 0 && (
+            {!isStreaming && (
               <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 bg-slate-50/30 dark:bg-slate-900/30">
-                <EnhancedSourcesList
-                  sources={message.resources}
-                  title="Sources & References"
-                  variant="collapsible"
-                  groupByTopic={true}
-                  showSimilarity={true}
-                  showContent={false}
-                  maxSources={15}
-                  sortBy="similarity"
-                  sortOrder="desc"
-                />
+                {message.resources && message.resources.length > 0 ? (
+                  <EnhancedSourcesList
+                    sources={message.resources}
+                    title="Sources & References"
+                    variant="collapsible"
+                    groupByTopic={true}
+                    showSimilarity={true}
+                    showContent={false}
+                    maxSources={15}
+                    sortBy="similarity"
+                    sortOrder="desc"
+                  />
+                ) : (
+                  <div className="text-xs text-slate-500 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                    🐛 DEBUG: No sources found for this message (resources: {JSON.stringify(message.resources)})
+                  </div>
+                )}
               </div>
             )}
 

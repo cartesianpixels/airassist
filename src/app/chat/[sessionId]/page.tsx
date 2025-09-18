@@ -67,7 +67,10 @@ function ChatSessionPage() {
     onComplete: (finalContent, sources, messageId) => {
       setIsThinking(false);
       setCurrentThinkingMessage('');
-      setShowSearchLogs(false);
+      // Keep search logs visible during response completion
+      setTimeout(() => {
+        setShowSearchLogs(false);
+      }, 2000); // Hide 2 seconds after response is complete
       handleStreamingComplete(finalContent, sources, messageId);
     },
     onError: (error) => {
