@@ -1,0 +1,137 @@
+[
+  {
+    "id": "69lPGgaxhbOu7uJsoDUC",
+    "document": "7110.65BB.pdf"
+  },
+  {
+    "id": "RgpO6Vj3Zx5xBHRFfjre",
+    "document": "FAA-H-8083-16B.pdf"
+  },
+  {
+    "id": "h8r3coNyyD3TU07uNXV3",
+    "document": "pcg_10-12-17.pdf"
+  },
+  {
+    "id": "oNWJxr9xnJS2WFuaJoJR",
+    "aviation_sources": [
+      {
+        "name": "Federal Aviation Administration (FAA)",
+        "type": "Regulatory Authority",
+        "resources": [
+          {
+            "title": "FAA Regulations & Guidance Library",
+            "url": "https://www.faa.gov/regulations_policies"
+          },
+          {
+            "title": "FAA Order JO 7110.65 - Air Traffic Control",
+            "url": "https://www.faa.gov/documentlibrary/media/order/atc.pdf"
+          },
+          {
+            "title": "FAA Aeronautical Information Manual (AIM)",
+            "url": "https://www.faa.gov/air_traffic/publications/atpubs/aim_html/"
+          }
+        ]
+      },
+      {
+        "name": "International Civil Aviation Organization (ICAO)",
+        "type": "Regulatory Authority",
+        "resources": [
+          {
+            "title": "ICAO Annexes",
+            "url": "https://www.icao.int/safety/airnavigation/pages/annexes.aspx"
+          },
+          {
+            "title": "ICAO Doc 4444 - Procedures for Air Navigation Services (PANS-ATM)",
+            "url": "https://store.icao.int/en/doc-4444-pans-atm"
+          },
+          {
+            "title": "ICAO Safety Reports",
+            "url": "https://www.icao.int/safety/pages/safety-reports.aspx"
+          }
+        ]
+      },
+      {
+        "name": "European Union Aviation Safety Agency (EASA)",
+        "type": "Regulatory Authority",
+        "resources": [
+          {
+            "title": "EASA Regulations",
+            "url": "https://www.easa.europa.eu/regulations"
+          },
+          {
+            "title": "EASA Safety Publications",
+            "url": "https://www.easa.europa.eu/en/publications"
+          }
+        ]
+      },
+      {
+        "name": "Skybrary",
+        "type": "Knowledge Base",
+        "resources": [
+          {
+            "title": "Aviation Safety Wiki",
+            "url": "https://skybrary.aero/"
+          }
+        ]
+      },
+      {
+        "name": "Jeppesen (Boeing)",
+        "type": "Commercial Charts & Resources",
+        "resources": [
+          {
+            "title": "Jeppesen Charts",
+            "url": "https://ww2.jeppesen.com/"
+          }
+        ]
+      },
+      {
+        "name": "Eurocontrol",
+        "type": "Air Navigation Service Provider",
+        "resources": [
+          {
+            "title": "Eurocontrol Network Operations",
+            "url": "https://www.eurocontrol.int/"
+          },
+          {
+            "title": "Skybrary Partnership",
+            "url": "https://skybrary.aero/"
+          }
+        ]
+      },
+      {
+        "name": "National Transportation Safety Board (NTSB)",
+        "type": "Accident Investigation Authority",
+        "resources": [
+          {
+            "title": "NTSB Aviation Accident Database",
+            "url": "https://www.ntsb.gov/Pages/AviationQuery.aspx"
+          }
+        ]
+      },
+      {
+        "name": "Aviation Safety Network (ASN)",
+        "type": "Database",
+        "resources": [
+          {
+            "title": "Aviation Safety Database",
+            "url": "https://aviation-safety.net/"
+          }
+        ]
+      },
+      {
+        "name": "Flight Safety Foundation (FSF)",
+        "type": "Safety Organization",
+        "resources": [
+          {
+            "title": "FSF Publications",
+            "url": "https://flightsafety.org/publications/"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "st2jbfPtuM9YswxcxwMQ",
+    "document": "faa-h-8083-25c.pdf"
+  }
+]

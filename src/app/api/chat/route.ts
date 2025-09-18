@@ -5,6 +5,7 @@ import { getEmbedding } from '@/lib/embeddings';
 import type { Database } from '@/types/database';
 import type { ApiUsageLogInsert } from '@/lib/supabase-typed';
 import { getUserTier } from '@/lib/server-profile';
+import { atcAssistantFlowWrapper } from '@/ai/assistant';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -77,137 +78,86 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 Starting knowledge base search for:', userMessage.content.substring(0, 100));
+    console.log('🔍 Processing query with assistant workflow:', userMessage.content.substring(0, 100));
 
-    // Get embedding for the user's question
-    const queryEmbedding = await getEmbedding(userMessage.content);
-
-    // Search knowledge base for relevant documents
-    const { data: knowledgeResults, error: searchError } = await supabase
-      .rpc('search_knowledge_base', {
-        query_embedding: queryEmbedding,
-        match_threshold: 0.7,
-        match_count: 5
-      }) as { data: KnowledgeBaseResult[] | null, error: any };
-
-    if (searchError) {
-      console.error('Knowledge base search error:', searchError);
-      return NextResponse.json(
-        { error: 'Failed to search knowledge base' },
-        { status: 500 }
-      );
-    }
-
-    console.log(`📚 Found ${knowledgeResults?.length || 0} relevant knowledge base documents`);
-
-    if (knowledgeResults && knowledgeResults.length > 0) {
-      console.log('📋 Knowledge base results preview:', knowledgeResults.map(r => ({
-        title: r.title?.substring(0, 50),
-        similarity: r.similarity,
-        contentLength: r.content?.length
-      })));
-    }
-
-    // Build context from knowledge base results
-    let knowledgeContext = '';
-    if (knowledgeResults && knowledgeResults.length > 0) {
-      knowledgeContext = knowledgeResults
-        .map((result, index) =>
-          `--- Document ${index + 1}: ${result.title} (Similarity: ${result.similarity.toFixed(2)}) ---\n${result.content}`
-        )
-        .join('\n\n');
-
-      console.log(`📝 Built knowledge context length: ${knowledgeContext.length} characters`);
-    }
-
-    // Create system message with knowledge context
-    const systemMessage = {
-      role: 'system' as const,
-      content: knowledgeContext
-        ? `${ATC_SYSTEM_PROMPT}\n\n=== KNOWLEDGE BASE CONTEXT ===\n${knowledgeContext}\n\n=== END CONTEXT ===`
-        : `${ATC_SYSTEM_PROMPT}\n\n=== NO RELEVANT CONTEXT FOUND ===\nThe knowledge base did not return any relevant documents for this query. Please inform the user that you don't have enough information to answer their question accurately.`
-    };
-
-    console.log(`🎯 System message length: ${systemMessage.content.length} characters`);
-    console.log(`🎯 Using context: ${knowledgeContext ? 'YES' : 'NO'}`);
-    if (knowledgeContext) {
-      console.log(`🎯 First 200 chars of context: ${knowledgeContext.substring(0, 200)}...`);
-      console.log(`🎯 Full system message preview: ${systemMessage.content.substring(0, 800)}...`);
-
-      // Log the exact content of first document to verify it contains runway incursion info
-      if (knowledgeResults && knowledgeResults.length > 0) {
-        console.log(`🔍 First document content (first 300 chars): ${knowledgeResults[0].content.substring(0, 300)}...`);
-      }
-    }
-
-    // Prepare messages for OpenAI (include system prompt with context)
-    const openaiMessages = [
-      systemMessage,
-      ...messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
-    ];
-
-    console.log('🤖 Calling OpenAI with knowledge base context...');
-
-    // Call OpenAI with streaming
-    const startTime = Date.now();
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: openaiMessages,
-      max_tokens: 2000,
-      temperature: 0.7,
-      stream: true,
-    });
-
-    // Create a streaming response
+    // Create a streaming response that sends thinking updates
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          let totalTokens = 0;
-          let promptTokens = 0;
-          let completionTokens = 0;
-          let fullResponse = '';
+          // Send thinking update: Starting search
+          const thinkingUpdate1 = JSON.stringify({
+            type: 'thinking',
+            message: 'Analyzing your question about ATC procedures...'
+          });
+          controller.enqueue(encoder.encode(`data: ${thinkingUpdate1}\n\n`));
 
-          for await (const chunk of completion) {
-            const delta = chunk.choices?.[0]?.delta;
+          // Send thinking update: Searching
+          const thinkingUpdate2 = JSON.stringify({
+            type: 'thinking',
+            message: 'Searching through FAA documentation...'
+          });
+          controller.enqueue(encoder.encode(`data: ${thinkingUpdate2}\n\n`));
 
-            if (delta?.content) {
-              fullResponse += delta.content;
-              const data = JSON.stringify({
-                choices: [{
-                  delta: {
-                    content: delta.content
-                  }
-                }]
-              });
+          // Actually call the assistant
+          const assistantResponse = await atcAssistantFlowWrapper(messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })));
 
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            }
+          // Send thinking update: Found documents
+          const thinkingUpdate3 = JSON.stringify({
+            type: 'thinking',
+            message: `Found ${assistantResponse.sources.length} relevant documents`
+          });
+          controller.enqueue(encoder.encode(`data: ${thinkingUpdate3}\n\n`));
 
-            // Track token usage if available
-            if (chunk.usage) {
-              totalTokens = chunk.usage.total_tokens || 0;
-              promptTokens = chunk.usage.prompt_tokens || 0;
-              completionTokens = chunk.usage.completion_tokens || 0;
-            }
+          // Send thinking update: Processing
+          const thinkingUpdate4 = JSON.stringify({
+            type: 'thinking',
+            message: 'Processing information and formatting response...'
+          });
+          controller.enqueue(encoder.encode(`data: ${thinkingUpdate4}\n\n`));
+
+          const startTime = Date.now();
+          const fullResponse = assistantResponse.content;
+
+          // Stream the response content character by character to simulate typing
+          const words = fullResponse.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            const chunk = i === 0 ? words[i] : ' ' + words[i];
+            const data = JSON.stringify({
+              choices: [{
+                delta: {
+                  content: chunk
+                }
+              }]
+            });
+
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+
+            // Small delay to simulate typing
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
 
-          // Estimate tokens if not provided (rough approximation)
-          if (totalTokens === 0) {
-            promptTokens = Math.ceil((systemMessage.content.length + userMessage.content.length) / 4);
-            completionTokens = Math.ceil(fullResponse.length / 4);
-            totalTokens = promptTokens + completionTokens;
-          }
+          // Estimate tokens (rough approximation)
+          const promptTokens = Math.ceil(userMessage.content.length / 4);
+          const completionTokens = Math.ceil(fullResponse.length / 4);
+          const totalTokens = promptTokens + completionTokens;
+
+          // Send sources information before completion
+          const sourcesData = JSON.stringify({
+            type: 'sources',
+            sources: assistantResponse.sources
+          });
+          controller.enqueue(encoder.encode(`data: ${sourcesData}\n\n`));
 
           // Send completion signal
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
 
           // Log usage for analytics
           const responseTime = Date.now() - startTime;
-          console.log(`✅ Chat completed: ${model}, ${totalTokens} tokens, ${responseTime}ms, KB results: ${knowledgeResults?.length || 0}`);
+          console.log(`✅ Chat completed: ${model}, ${totalTokens} tokens, ${responseTime}ms, Sources: ${assistantResponse.sources.length}`);
 
           // Store analytics data
           try {
@@ -221,9 +171,10 @@ export async function POST(request: NextRequest) {
               cost: calculateCost(model, promptTokens, completionTokens),
               response_time_ms: responseTime,
               metadata: {
-                knowledge_base_results: knowledgeResults?.length || 0,
+                sources_count: assistantResponse.sources.length,
                 query_length: userMessage.content.length,
-                response_length: fullResponse.length
+                response_length: fullResponse.length,
+                sources: assistantResponse.sources.map(s => ({ id: s.id, name: s.name, type: s.source_type }))
               }
             };
 

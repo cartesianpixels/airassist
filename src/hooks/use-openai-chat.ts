@@ -9,8 +9,9 @@ export interface StreamingState {
 
 export interface UseOpenAIChatOptions {
   onChunk?: (content: string) => void;
-  onComplete?: (content: string, messageId?: string) => void;
+  onComplete?: (content: string, sources?: any[], messageId?: string) => void;
   onError?: (error: string) => void;
+  onThinking?: (message: string) => void;
 }
 
 export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
@@ -48,6 +49,7 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
 
       const decoder = new TextDecoder();
       let content = '';
+      let sources: any[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -60,19 +62,31 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              console.log('Stream done, final content length:', content.length);
-              setStreamingState(prev => ({
-                ...prev,
-                isStreaming: false
-              }));
-              options.onComplete?.(content, messageId);
+              console.log('Stream done, final content length:', content.length, 'sources:', sources.length);
+              setStreamingState({
+                isStreaming: false,
+                currentContent: '',
+                error: null
+              });
+              options.onComplete?.(content, sources, messageId);
               return content;
             }
 
             try {
               const parsed = JSON.parse(data);
-              const deltaContent = parsed.choices?.[0]?.delta?.content || '';
-              if (deltaContent) {
+
+              // Handle thinking updates
+              if (parsed.type === 'thinking') {
+                options.onThinking?.(parsed.message);
+              }
+              // Handle sources data
+              else if (parsed.type === 'sources') {
+                sources = parsed.sources || [];
+                console.log('Received sources:', sources.length);
+              }
+              // Handle content data
+              else if (parsed.choices?.[0]?.delta?.content) {
+                const deltaContent = parsed.choices[0].delta.content;
                 content += deltaContent;
                 setStreamingState(prev => ({
                   ...prev,
@@ -91,7 +105,7 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
         ...prev,
         isStreaming: false
       }));
-      options.onComplete?.(content, messageId);
+      options.onComplete?.(content, sources, messageId);
       return content;
 
     } catch (error) {

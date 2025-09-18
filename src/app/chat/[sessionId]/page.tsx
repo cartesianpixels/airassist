@@ -29,6 +29,7 @@ function ChatSessionPage() {
   const [isThinking, setIsThinking] = React.useState(false);
   const [streamingMessageId, setStreamingMessageId] = React.useState<string | null>(null);
   const [promptSent, setPromptSent] = React.useState(false);
+  const [currentThinkingMessage, setCurrentThinkingMessage] = React.useState<string>('');
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -60,17 +61,22 @@ function ChatSessionPage() {
       // Real-time content updates are handled by the streamingState.currentContent
       // which is used in the render logic below
     },
-    onComplete: (finalContent, messageId) => {
+    onComplete: (finalContent, sources, messageId) => {
       setIsThinking(false);
-      handleStreamingComplete(finalContent, messageId);
+      setCurrentThinkingMessage('');
+      handleStreamingComplete(finalContent, sources, messageId);
     },
     onError: (error) => {
       console.error('Streaming error:', error);
       setIsThinking(false);
+      setCurrentThinkingMessage('');
       setStreamingMessageId(null);
       if (streamingMessageId) {
         setSupabaseMessages(prev => prev.filter(m => m.id !== streamingMessageId));
       }
+    },
+    onThinking: (message) => {
+      setCurrentThinkingMessage(message);
     }
   });
 
@@ -181,7 +187,7 @@ function ChatSessionPage() {
     }
   };
 
-  const handleStreamingComplete = async (finalContent: string, messageId?: string) => {
+  const handleStreamingComplete = async (finalContent: string, sources?: any[], messageId?: string) => {
     const targetMessageId = messageId || streamingMessageId;
     if (!targetMessageId || !currentSessionId || !user) {
       console.warn('No message ID, session ID, or user available for completion');
@@ -189,25 +195,30 @@ function ChatSessionPage() {
     }
 
     try {
-      // Save assistant message to Supabase
-      await addMessage(currentSessionId, 'assistant', finalContent);
+      // Clear streaming state FIRST to prevent duplication during update
+      setStreamingMessageId(null);
+      reset(); // Clear the streaming state from the hook
 
-      // Update local state
+      // Save assistant message to Supabase directly (don't use addMessage as it adds to local state)
+      const { addMessageToSession } = await import('@/lib/database-supabase');
+      await addMessageToSession(currentSessionId, user.id, 'assistant', finalContent, sources || []);
+
+      // Update the streaming placeholder with final content and sources
+      setSupabaseMessages(prev =>
+        prev.map(msg =>
+          msg.id === targetMessageId
+            ? { ...msg, content: finalContent, resources: sources || [] }
+            : msg
+        )
+      );
+
+      // Check if we should auto-name this chat after completion
       const completedMessage = {
         id: targetMessageId,
         role: "assistant" as const,
         content: finalContent,
+        resources: sources || [],
       };
-
-      setSupabaseMessages(prev =>
-        prev.map(msg =>
-          msg.id === targetMessageId ? completedMessage as any : msg
-        )
-      );
-
-      setStreamingMessageId(null);
-
-      // Check if we should auto-name this chat after completion
       const updatedMessages = [...messages, completedMessage];
       if (shouldAutoNameChat(updatedMessages)) {
         console.log('Auto-naming chat after', updatedMessages.length, 'messages');
@@ -431,18 +442,32 @@ function ChatSessionPage() {
                     })}
                   </AnimatePresence>
 
-                  {/* Thinking Indicator */}
-                  <AnimatePresence>
-                    {isThinking && !streamingState.isStreaming && (
-                      <ThinkingIndicator />
-                    )}
-                  </AnimatePresence>
                 </div>
               )}
               <div ref={messagesEndRef} className="h-1" />
             </div>
           </ScrollArea>
         </div>
+
+        {/* Thinking Indicator - Above Input */}
+        <AnimatePresence>
+          {(isThinking || streamingState.isStreaming) && (
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 10, opacity: 0 }}
+              className="sticky bottom-20 z-10"
+            >
+              <div className="max-w-4xl mx-auto px-4">
+                <ThinkingIndicator
+                  isStreaming={streamingState.isStreaming}
+                  currentContent={streamingState.currentContent}
+                  realThinkingMessage={currentThinkingMessage}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Input Area */}
         <motion.div

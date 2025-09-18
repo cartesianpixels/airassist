@@ -5,127 +5,121 @@ import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sparkles, Brain, Zap } from "lucide-react";
 
-export function ThinkingIndicator() {
-  const thinkingMessages = [
-    "Searching knowledge base...",
-    "Analyzing procedures...",
-    "Finding relevant regulations...",
-    "Processing your question...",
-    "Gathering information...",
+interface ThinkingIndicatorProps {
+  isStreaming?: boolean;
+  currentContent?: string;
+  realThinkingMessage?: string;
+}
+
+export function ThinkingIndicator({
+  isStreaming = false,
+  currentContent = "",
+  realThinkingMessage = ""
+}: ThinkingIndicatorProps) {
+  const fallbackStreamingMessages = [
+    "✍️ Writing response...",
+    "📖 Referencing sources...",
   ];
 
-  const [currentMessage, setCurrentMessage] = React.useState(thinkingMessages[0]);
+  const fallbackThinkingMessages = [
+    "🤖 Processing your question...",
+    "🔍 Searching documentation...",
+  ];
+
+  const [fallbackMessage, setFallbackMessage] = React.useState("");
+
+  // Use real thinking message if available, otherwise use fallback
+  const displayMessage = realThinkingMessage || fallbackMessage;
 
   React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentMessage((prev) => {
-        const currentIndex = thinkingMessages.indexOf(prev);
-        const nextIndex = (currentIndex + 1) % thinkingMessages.length;
-        return thinkingMessages[nextIndex];
-      });
-    }, 2000);
+    // Only use fallback messages when no real thinking message is available
+    if (!realThinkingMessage) {
+      const messages = isStreaming ? fallbackStreamingMessages : fallbackThinkingMessages;
+      setFallbackMessage(messages[0]);
 
-    return () => clearInterval(interval);
-  }, []);
+      const interval = setInterval(() => {
+        setFallbackMessage((prev) => {
+          const currentIndex = messages.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % messages.length;
+          return messages[nextIndex];
+        });
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isStreaming, realThinkingMessage]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex justify-start mb-6"
+      exit={{ opacity: 0, y: 10 }}
+      className="flex justify-center"
     >
-      <div className="flex items-start gap-3 max-w-4xl">
-        <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, 5, -5, 0]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            repeatType: "reverse"
-          }}
-        >
-          <Avatar className="w-8 h-8 border-2 border-emerald-200 dark:border-emerald-800">
-            <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500">
-              <Sparkles className="w-4 h-4 text-white" />
-            </AvatarFallback>
-          </Avatar>
-        </motion.div>
-
-        <div className="flex-1">
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl rounded-tl-md border border-slate-200/60 dark:border-slate-700/60 shadow-lg overflow-hidden">
-            <div className="px-4 py-3">
-              <div className="flex items-center gap-3">
-                {/* Thinking animation */}
-                <div className="flex items-center gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      animate={{
-                        y: [-2, 2, -2],
-                        opacity: [0.4, 1, 0.4]
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        delay: i * 0.2
-                      }}
-                      className="w-2 h-2 bg-emerald-500 rounded-full"
-                    />
-                  ))}
-                </div>
-
-                {/* Thinking message */}
-                <motion.div
-                  key={currentMessage}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="flex items-center gap-2"
-                >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Brain className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  </motion.div>
-                  <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                    {currentMessage}
-                  </span>
-                </motion.div>
-              </div>
-
-              {/* Progress bar */}
+      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-lg border border-slate-200/60 dark:border-slate-700/60 shadow-lg px-4 py-2">
+        <div className="flex items-center gap-3">
+          {/* Thinking animation */}
+          <div className="flex items-center gap-1">
+            {[0, 1, 2].map((i) => (
               <motion.div
-                className="mt-3 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <motion.div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
-                  animate={{
-                    x: ["-100%", "100%"]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </motion.div>
-            </div>
+                key={i}
+                animate={{
+                  y: [-1, 1, -1],
+                  opacity: [0.4, 1, 0.4]
+                }}
+                transition={{
+                  duration: 1.2,
+                  repeat: Infinity,
+                  delay: i * 0.15
+                }}
+                className="w-1.5 h-1.5 bg-emerald-500 rounded-full"
+              />
+            ))}
+          </div>
 
-            {/* Shimmer effect */}
+          {/* Current action */}
+          <motion.div
+            key={currentMessage}
+            initial={{ opacity: 0, x: 5 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -5 }}
+            className="flex items-center gap-2"
+          >
             <motion.div
-              className="h-1 bg-gradient-to-r from-transparent via-emerald-200 dark:via-emerald-700 to-transparent"
+              animate={{ rotate: isStreaming ? [0, 360] : [0, 5, -5, 0] }}
+              transition={{
+                duration: isStreaming ? 2 : 1,
+                repeat: Infinity,
+                ease: isStreaming ? "linear" : "easeInOut"
+              }}
+            >
+              {isStreaming ? (
+                <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Brain className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              )}
+            </motion.div>
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+              {displayMessage}
+            </span>
+          </motion.div>
+
+          {/* Content length indicator */}
+          {isStreaming && currentContent && (
+            <div className="text-xs text-slate-500 dark:text-slate-500 flex items-center gap-1">
+              <span>•</span>
+              <span>{currentContent.length} chars</span>
+            </div>
+          )}
+
+          {/* Mini progress bar */}
+          <div className="w-12 h-0.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
               animate={{
-                x: ["-100%", "200%"]
+                x: ["-100%", "100%"]
               }}
               transition={{
-                duration: 1.5,
+                duration: isStreaming ? 1 : 1.5,
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
