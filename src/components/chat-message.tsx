@@ -16,35 +16,15 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-// Streaming text component with typewriter effect
+// Streaming text component - simplified to avoid duplication issues
 const StreamingText: React.FC<{ content: string; isComplete: boolean }> = ({
   content,
   isComplete,
 }) => {
-  const [displayedContent, setDisplayedContent] = React.useState("");
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-
-  React.useEffect(() => {
-    if (currentIndex < content.length) {
-      const timer = setTimeout(() => {
-        setDisplayedContent(content.slice(0, currentIndex + 1));
-        setCurrentIndex(currentIndex + 1);
-      }, 20); // Adjust speed as needed
-      return () => clearTimeout(timer);
-    }
-  }, [content, currentIndex]);
-
-  React.useEffect(() => {
-    if (content.length < displayedContent.length || content !== displayedContent.slice(0, content.length)) {
-      setDisplayedContent(content);
-      setCurrentIndex(content.length);
-    }
-  }, [content, displayedContent]);
-
   return (
     <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {displayedContent}
+        {content}
       </ReactMarkdown>
       {!isComplete && (
         <motion.span

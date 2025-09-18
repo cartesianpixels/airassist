@@ -171,7 +171,8 @@ function ChatSessionPage() {
         [...messages, { role: 'user' as const, content: input.trim() }].map((msg) =>
           'id' in msg ? { role: msg.role, content: msg.content } : msg
         ) as any,
-        newStreamingId
+        newStreamingId,
+        currentSessionId
       );
     } catch (error) {
       console.error('Error sending message:', error);

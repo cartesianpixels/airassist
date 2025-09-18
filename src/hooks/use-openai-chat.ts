@@ -20,7 +20,7 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
     error: null,
   });
 
-  const sendMessage = useCallback(async (messages: Omit<Message, 'id' | 'resources'>[], messageId?: string) => {
+  const sendMessage = useCallback(async (messages: Omit<Message, 'id' | 'resources'>[], messageId?: string, sessionId?: string) => {
     console.log('Starting OpenAI message send...');
     setStreamingState({
       isStreaming: true,
@@ -34,7 +34,7 @@ export function useOpenAIChat(options: UseOpenAIChatOptions = {}) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, sessionId }),
       });
 
       if (!response.ok) {
