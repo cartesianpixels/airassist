@@ -122,26 +122,38 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
               )}
             </div>
 
-            {/* Enhanced Sources section */}
-            {!isStreaming && (
+            {/* Simple Sources section - only show if there are actually sources AND a real response */}
+            {!isStreaming && message.resources && message.resources.length > 0 && !message.content.includes("No relevant information found") && (
               <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 bg-slate-50/30 dark:bg-slate-900/30">
-                {message.resources && message.resources.length > 0 ? (
-                  <EnhancedSourcesList
-                    sources={message.resources}
-                    title="Sources & References"
-                    variant="collapsible"
-                    groupByTopic={true}
-                    showSimilarity={true}
-                    showContent={false}
-                    maxSources={15}
-                    sortBy="similarity"
-                    sortOrder="desc"
-                  />
-                ) : (
-                  <div className="text-xs text-slate-500 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
-                    🐛 DEBUG: No sources found for this message (resources: {JSON.stringify(message.resources)})
-                  </div>
-                )}
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Sources & References ({message.resources.length})
+                </div>
+                <div className="space-y-1">
+                  {message.resources.slice(0, 5).map((source: any, index: number) => (
+                    <div key={index} className="text-xs text-slate-600 dark:text-slate-400 p-2 bg-white dark:bg-slate-800 rounded border">
+                      <div className="font-medium">{source.title || source.display_name || source.name}</div>
+                      {source.similarity && (
+                        <div className="text-slate-500 dark:text-slate-500">
+                          Relevance: {(source.similarity * 100).toFixed(1)}%
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {message.resources.length > 5 && (
+                    <div className="text-xs text-slate-500 text-center pt-1">
+                      +{message.resources.length - 5} more sources
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* DEBUG: Show when no sources but should have some */}
+            {!isStreaming && (!message.resources || message.resources.length === 0) && !message.content.includes("No relevant information found") && (
+              <div className="px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 bg-yellow-50 dark:bg-yellow-900/20">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  🐛 DEBUG: Response generated but no sources attached (resources: {JSON.stringify(message.resources)})
+                </div>
               </div>
             )}
 

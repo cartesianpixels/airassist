@@ -122,11 +122,11 @@ function smartSelectDocuments(results: any[], query: string = ''): any[] {
 
 // 🔑 Extract key terms from user query
 function extractKeyTerms(query: string): string[] {
-  const wakeTurbulenceTerms = ['wake', 'turbulence', 'separation', 'minima', 'distance', 'miles', 'minutes', 'super', 'heavy', 'B757', 'aircraft'];
+  const aviationTerms = ['separation', 'minima', 'distance', 'miles', 'minutes', 'aircraft', 'runway', 'approach', 'departure', 'clearance', 'altitude', 'traffic', 'controller', 'pilot'];
   const queryWords = query.toLowerCase().split(/\s+/);
 
   // Return intersection of query words and known aviation terms
-  return wakeTurbulenceTerms.filter(term =>
+  return aviationTerms.filter(term =>
     queryWords.some(word => word.includes(term) || term.includes(word))
   );
 }
@@ -180,15 +180,17 @@ function findRelevantSections(content: string, keyTerms: string[], maxChars: num
     // Boost paragraphs with procedural information (numbers + units)
     const procedureBoost = /\d+\s*(miles?|minutes?|feet|nm|degrees)/i.test(paragraph) ? 5 : 0;
 
-    // Strong boost for wake turbulence content
-    const wakeBoost = /wake\s*turbulence/i.test(paragraph) ? 10 : 0;
+    // Boost for specific procedural content based on query terms
+    const specificBoost = keyTerms.some(term =>
+      new RegExp(term, 'i').test(paragraph)
+    ) ? 8 : 0;
 
     // Boost for separation minima content
     const separationBoost = /separation|behind|minima/i.test(paragraph) ? 3 : 0;
 
     return {
       paragraph: paragraph.trim(),
-      score: keywordScore + procedureBoost + separationBoost,
+      score: keywordScore + procedureBoost + specificBoost + separationBoost,
       length: paragraph.length
     };
   }).filter(p => p.paragraph.length > 20); // Filter out tiny paragraphs
