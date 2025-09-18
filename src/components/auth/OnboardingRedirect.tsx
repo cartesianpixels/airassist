@@ -11,17 +11,7 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
   const [shouldRedirect, setShouldRedirect] = React.useState(false);
 
   React.useEffect(() => {
-    console.log('🔄 ONBOARDING REDIRECT CHECK:', {
-      pathname,
-      loading,
-      profileLoading,
-      hasUser: !!user,
-      hasCompletedOnboarding,
-      shouldSkipCheck: pathname.startsWith('/auth') || pathname === '/onboarding' || pathname === '/api'
-    });
-
     if (loading || profileLoading) {
-      console.log('⏳ Still loading, skipping redirect check');
       return;
     }
 
@@ -31,22 +21,16 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
       pathname === '/onboarding' ||
       pathname === '/api'
     ) {
-      console.log('🚫 Skipping onboarding check for protected path:', pathname);
-      setShouldRedirect(false); // Ensure we don't redirect
+      setShouldRedirect(false);
       return;
     }
 
     // If user is logged in but hasn't completed onboarding
-    if (user && !hasCompletedOnboarding) {
-      console.log('🎯 User needs onboarding - redirecting...');
+    if (user && !hasCompletedOnboarding && !shouldRedirect) {
       setShouldRedirect(true);
       router.replace('/onboarding');
-    } else if (user && hasCompletedOnboarding) {
-      console.log('✅ User has completed onboarding - allowing access');
-    } else if (!user) {
-      console.log('👤 No user found');
     }
-  }, [user, loading, profileLoading, hasCompletedOnboarding, pathname, router]);
+  }, [user, loading, profileLoading, hasCompletedOnboarding, pathname, router, shouldRedirect]);
 
   // Show loading spinner while checking
   if (loading || profileLoading) {
@@ -66,6 +50,5 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
     );
   }
 
-  console.log('✅ RENDERING CHILDREN - shouldRedirect:', shouldRedirect);
   return <>{children}</>;
 }

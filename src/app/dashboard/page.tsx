@@ -162,13 +162,14 @@ function DashboardPage() {
 
   // Show loading screen
   if (loading || profileLoading) {
+    console.log('🔄 DASHBOARD LOADING:', { loading, profileLoading, hasUser: !!user, hasProfile: !!profile });
     return (
       <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-full flex items-center justify-center shadow-xl animate-pulse">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <p className="text-slate-600 dark:text-slate-400">Loading dashboard...</p>
+          <p className="text-slate-600 dark:text-slate-400">Loading dashboard... (loading: {loading ? 'true' : 'false'}, profileLoading: {profileLoading ? 'true' : 'false'})</p>
         </div>
       </div>
     );
