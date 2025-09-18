@@ -25,29 +25,34 @@ export async function getEmbedding(text: string): Promise<number[]> {
   console.log(`Getting embedding for: "${textPreview}"`);
 
   try {
-    console.log('Calling OpenAI embeddings API...');
-    // Get embedding from OpenAI
-    const client = getOpenAI();
+    // 💰 CACHE LAYER: Try cache first
+    const { EmbeddingCacheManager } = await import('./cache-manager');
 
-    // Add timeout to embedding call
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI embedding timeout after 30 seconds')), 30000);
+    return await EmbeddingCacheManager.getOrGenerate(text, async () => {
+      console.log('💸 Calling OpenAI embeddings API...');
+      // Get embedding from OpenAI
+      const client = getOpenAI();
+
+      // Add timeout to embedding call
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('OpenAI embedding timeout after 30 seconds')), 30000);
+      });
+
+      const embeddingPromise = client.embeddings.create({
+        model: 'text-embedding-ada-002',
+        input: text.replace(/\n/g, ' '),
+      });
+
+      const response = await Promise.race([embeddingPromise, timeoutPromise]);
+
+      const embedding = response.data[0]?.embedding;
+      if (!embedding) {
+        throw new Error('No embedding returned from OpenAI');
+      }
+
+      console.log(`💰 Embedding generated successfully (${Date.now() - startTime}ms, length: ${embedding.length})`);
+      return embedding;
     });
-
-    const embeddingPromise = client.embeddings.create({
-      model: 'text-embedding-ada-002',
-      input: text.replace(/\n/g, ' '),
-    });
-
-    const response = await Promise.race([embeddingPromise, timeoutPromise]);
-
-    const embedding = response.data[0]?.embedding;
-    if (!embedding) {
-      throw new Error('No embedding returned from OpenAI');
-    }
-
-    console.log(`Embedding generated successfully (${Date.now() - startTime}ms, length: ${embedding.length})`);
-    return embedding;
   } catch (error) {
     console.error(`Error getting embedding for "${textPreview}":`, error instanceof Error ? error.message : error);
     throw error;

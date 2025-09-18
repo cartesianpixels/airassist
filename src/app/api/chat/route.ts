@@ -100,10 +100,7 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${thinkingUpdate2}\n\n`));
 
           // Actually call the assistant
-          const assistantResponse = await atcAssistantFlowWrapper(messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })));
+          const assistantResponse = await atcAssistantFlowWrapper(messages as any);
 
           // Send thinking update: Found documents
           const thinkingUpdate3 = JSON.stringify({
@@ -121,6 +118,12 @@ export async function POST(request: NextRequest) {
 
           const startTime = Date.now();
           const fullResponse = assistantResponse.content;
+
+          // 💰 Log cache performance
+          const { CacheStats } = await import('@/lib/cache-manager');
+          const cacheStats = CacheStats.getStats();
+          const totalCacheHits = Object.values(cacheStats).reduce((total: number, cache: any) => total + (cache.size || 0), 0);
+          console.log(`💰 Cache performance: ${totalCacheHits} items cached across all layers`);
 
           // Stream the response content character by character to simulate typing
           const words = fullResponse.split(' ');
@@ -161,24 +164,26 @@ export async function POST(request: NextRequest) {
 
           // Store analytics data
           try {
-            const usageLog: ApiUsageLogInsert = {
+            const usageLog = {
               user_id: user.id,
               session_id: sessionId,
+              endpoint: '/api/chat',
+              method: 'POST',
+              status_code: 200,
+              response_time_ms: responseTime,
               model_used: model,
               prompt_tokens: promptTokens,
               completion_tokens: completionTokens,
-              total_tokens: totalTokens,
               cost: calculateCost(model, promptTokens, completionTokens),
-              response_time_ms: responseTime,
               metadata: {
                 sources_count: assistantResponse.sources.length,
                 query_length: userMessage.content.length,
                 response_length: fullResponse.length,
-                sources: assistantResponse.sources.map(s => ({ id: s.id, name: s.name, type: s.source_type }))
+                sources: assistantResponse.sources.map((s: any) => ({ id: s.id, name: s.name, type: s.source_type }))
               }
             };
 
-            await supabase.from('api_usage_logs').insert(usageLog);
+            await supabase.from('api_usage_logs').insert(usageLog as any);
           } catch (analyticsError) {
             console.error('Failed to log usage analytics:', analyticsError);
             // Don't fail the request for analytics errors

@@ -112,21 +112,15 @@ export async function generateChatTitle(sessionId: string, messages: ChatMessage
       };
     }
 
-    // Track analytics event
+    // Track analytics event (temporarily disabled due to enum issue)
     try {
-      const analyticsData: AnalyticsEventInsert = {
-        user_id: user.id,
-        session_id: sessionId,
-        event_type: 'session_auto_named',
-        event_data: {
-          old_title: session.title,
-          new_title: generatedTitle,
-          message_count: messages.length,
-          generated_by: 'ai'
-        }
-      };
-
-      await insertAnalytics(analyticsData);
+      // TODO: Add 'session_auto_named' to database enum
+      console.log('📊 Session auto-named:', {
+        sessionId,
+        oldTitle: session.title,
+        newTitle: generatedTitle,
+        messageCount: messages.length
+      });
     } catch (analyticsError) {
       console.error('Analytics tracking error:', analyticsError);
     }
