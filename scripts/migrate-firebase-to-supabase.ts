@@ -23,25 +23,20 @@ const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 interface FirebaseKnowledgeItem {
   id: string;
+  parentId?: string;  // For chunked items
   content: string;
-  metadata: {
-    title: string;
-    type: string;
-    procedure_type: string;
-    chapter: string;
-    section: string;
-    paragraph: string;
-    source: string;
-    chunk_index: number;
-    total_chunks: number;
-    url: string;
-    word_count: number;
-    char_count: number;
-    scraped_at: string;
-  };
-  displayName: string;
-  tags: string[];
-  summary: string;
+  metadata: any;  // Made flexible to handle both old and new formats
+  displayName?: string; // Old format
+  title?: string;      // New format
+  tags?: string[];
+  summary?: string;
+  // New chunk fields
+  topic?: string;
+  semanticFocus?: string;
+  keywords?: string[];
+  chunkIndex?: number;
+  totalChunks?: number;
+  size?: number;
 }
 
 interface SupabaseKnowledgeItem {
@@ -54,6 +49,13 @@ interface SupabaseKnowledgeItem {
   embedding: number[];
   created_at: string;
   updated_at: string;
+  // New chunk fields
+  parent_document_id?: string;
+  content_topic?: string;
+  semantic_focus?: string;
+  chunk_index?: number;
+  total_chunks?: number;
+  keywords?: string[];
 }
 
 interface FirebaseSourceItem {
@@ -97,21 +99,42 @@ async function generateEmbedding(text: string): Promise<number[]> {
 function transformFirebaseToSupabase(item: FirebaseKnowledgeItem): Omit<SupabaseKnowledgeItem, 'embedding'> {
   const now = new Date().toISOString();
 
-  // Generate a UUID from the Firebase ID for consistency
-  const uuid = uuidv4();
+  // Use existing ID if it's already a UUID, otherwise generate new one
+  const id = item.id.includes('-') ? item.id : uuidv4();
+
+  // Handle parent document ID - convert non-UUID to UUID or null
+  let parentDocumentId = null;
+  if (item.parentId) {
+    if (item.parentId.includes('-')) {
+      parentDocumentId = item.parentId; // Already a UUID
+    } else {
+      // For non-UUID parent IDs, we'll set to null for now
+      // Could create a mapping if needed
+      parentDocumentId = null;
+    }
+  }
 
   return {
-    id: uuid,
+    id,
     content: item.content,
-    display_name: item.displayName,
+    display_name: item.title || item.displayName || 'Untitled',  // Chunks use 'title' field
     summary: item.summary || '',
     tags: item.tags || [],
     metadata: {
       ...item.metadata,
-      firebase_id: item.id, // Keep original Firebase ID for reference
+      original_id: item.id,
+      original_parent_id: item.parentId, // Keep original for reference
+      chunked: !!item.parentId
     },
     created_at: now,
     updated_at: now,
+    // New chunk fields - set parentId to null since they're not UUIDs
+    parent_document_id: null,  // Non-UUID parentIds, store in metadata instead
+    content_topic: item.topic || null,
+    semantic_focus: item.semanticFocus || null,
+    chunk_index: item.chunkIndex || null,
+    total_chunks: item.totalChunks || null,
+    keywords: item.keywords || []
   };
 }
 
@@ -119,7 +142,7 @@ async function loadFirebaseData(): Promise<{
   knowledgeItems: FirebaseKnowledgeItem[];
   sourceItems: FirebaseSourceItem[];
 }> {
-  const knowledgeBasePath = path.join(__dirname, '../firebase/knowledge-base.json');
+  const knowledgeBasePath = path.join(__dirname, '../knowledge-base.json');
   const sourcesPath = path.join(__dirname, '../firebase/aviation_sources.json');
 
   const knowledgeItems: FirebaseKnowledgeItem[] = [];
@@ -253,7 +276,11 @@ async function migrateWithEmbeddings() {
 async function migrateKnowledgeBase(firebaseItems: FirebaseKnowledgeItem[]) {
   console.log('\n📚 Migrating knowledge base with embeddings...');
 
-  const batchSize = 10; // Smaller batches for embedding generation
+  // STEP 1: Create parent documents first and get their IDs
+  const parentIdMap = await createParentDocuments(firebaseItems);
+
+  // STEP 2: Process chunks with correct parent IDs
+  const batchSize = 10;
   let processed = 0;
   let successful = 0;
   let failed = 0;
@@ -263,16 +290,16 @@ async function migrateKnowledgeBase(firebaseItems: FirebaseKnowledgeItem[]) {
 
     console.log(`🔄 Processing knowledge batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(firebaseItems.length / batchSize)}...`);
 
-    // Process batch items
     const supabaseItems: SupabaseKnowledgeItem[] = [];
 
     for (const item of batch) {
       try {
-        // Transform structure
-        const transformed = transformFirebaseToSupabase(item);
+        // Transform structure with proper parent ID
+        const transformed = transformFirebaseToSupabaseWithParent(item, parentIdMap);
 
         // Generate embedding
-        console.log(`🧠 Generating embedding for: ${item.displayName}`);
+        const displayName = item.title || item.displayName || 'Untitled';
+        console.log(`🧠 Generating embedding for: ${displayName}`);
         const embedding = await generateEmbedding(item.content);
 
         supabaseItems.push({
@@ -308,11 +335,115 @@ async function migrateKnowledgeBase(firebaseItems: FirebaseKnowledgeItem[]) {
       }
     }
 
-    // Rate limiting pause
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   console.log(`📚 Knowledge base migration: ${successful} successful, ${failed} failed`);
+}
+
+async function createParentDocuments(firebaseItems: FirebaseKnowledgeItem[]): Promise<Map<string, string>> {
+  console.log('👨‍👩‍👧‍👦 Creating parent documents first...');
+
+  // Find ALL unique parent IDs (both chapter and section level)
+  const uniqueParentIds = new Set<string>();
+  firebaseItems.forEach(item => {
+    if (item.parentId && !item.parentId.match(/^[0-9a-f-]{36}$/)) { // Not a UUID format
+      uniqueParentIds.add(item.parentId);
+    }
+  });
+
+  const parentIdMap = new Map<string, string>();
+
+  if (uniqueParentIds.size === 0) {
+    console.log('📄 No parent documents to create');
+    return parentIdMap;
+  }
+
+  console.log(`📄 Creating ${uniqueParentIds.size} parent documents...`);
+
+  for (const originalParentId of uniqueParentIds) {
+    try {
+      // Create a parent document placeholder
+      const parentDoc = {
+        id: uuidv4(),
+        content: `Parent document: ${originalParentId}`,
+        display_name: originalParentId.replace('scraped_item_', '').replace(/_/g, ' '),
+        summary: `Parent document for chunks from ${originalParentId}`,
+        tags: [],
+        metadata: {
+          is_parent: true,
+          original_id: originalParentId,
+          created_by_migration: true
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        parent_document_id: null,
+        content_topic: 'parent',
+        semantic_focus: 'Parent document for chunked content',
+        chunk_index: null,
+        total_chunks: null,
+        keywords: []
+      };
+
+      // Generate minimal embedding for parent
+      const embedding = await generateEmbedding(parentDoc.content);
+
+      const { data, error } = await supabase
+        .from('knowledge_base')
+        .insert({ ...parentDoc, embedding } as any)
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error(`❌ Failed to create parent ${originalParentId}:`, error.message);
+      } else {
+        parentIdMap.set(originalParentId, data.id);
+        console.log(`✅ Created parent: ${originalParentId} → ${data.id}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error creating parent ${originalParentId}:`, error);
+    }
+  }
+
+  console.log(`👨‍👩‍👧‍👦 Created ${parentIdMap.size} parent documents`);
+  return parentIdMap;
+}
+
+function transformFirebaseToSupabaseWithParent(item: FirebaseKnowledgeItem, parentIdMap: Map<string, string>): Omit<SupabaseKnowledgeItem, 'embedding'> {
+  const now = new Date().toISOString();
+  const id = item.id.includes('-') ? item.id : uuidv4();
+
+  // Get proper parent UUID
+  let parentDocumentId = null;
+  if (item.parentId) {
+    if (item.parentId.match(/^[0-9a-f-]{36}$/)) {
+      parentDocumentId = item.parentId; // Already a UUID
+    } else {
+      parentDocumentId = parentIdMap.get(item.parentId) || null;
+    }
+  }
+
+  return {
+    id,
+    content: item.content,
+    display_name: item.title || item.displayName || 'Untitled',
+    summary: item.summary || '',
+    tags: item.tags || [],
+    metadata: {
+      ...item.metadata,
+      original_id: item.id,
+      original_parent_id: item.parentId,
+      chunked: !!item.parentId
+    },
+    created_at: now,
+    updated_at: now,
+    parent_document_id: parentDocumentId,
+    content_topic: item.topic || null,
+    semantic_focus: item.semanticFocus || null,
+    chunk_index: item.chunkIndex || null,
+    total_chunks: item.totalChunks || null,
+    keywords: item.keywords || []
+  };
 }
 
 async function migrateAviationSources(sourceItems: FirebaseSourceItem[]) {
