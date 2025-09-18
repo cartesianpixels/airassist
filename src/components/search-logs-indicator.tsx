@@ -27,57 +27,74 @@ export function SearchLogsIndicator({
   const [currentStep, setCurrentStep] = React.useState(0);
   const [sessionId] = React.useState(() => Math.random().toString(36).substring(2, 15));
 
-  // Show meaningful knowledge base findings at readable pace
-  const searchSteps = React.useMemo(() => [
-    {
-      message: `🔍 Searching for "${searchQuery.substring(0, 35)}${searchQuery.length > 35 ? '...' : ''}"`,
-      type: 'search' as const,
-      delay: 800,
-      details: 'Processing your question'
-    },
-    {
-      message: "📚 Found 15 relevant FAA documents",
-      type: 'found' as const,
-      delay: 2000,
-      details: 'Analyzing procedural content'
-    },
-    {
-      message: "📖 Chapter 7, Section 9 - Wake turbulence minima (87.5% match)",
-      type: 'found' as const,
-      delay: 3500,
-      details: 'Apply provisions of paragraph 5-5-4'
-    },
-    {
-      message: "📖 Chapter 5, Section 9 - Runway separation criteria (87.3% match)",
-      type: 'found' as const,
-      delay: 5000,
-      details: 'Adjacent approach courses procedures'
-    },
-    {
-      message: "📖 Chapter 3, Section 9 - Intersection departure rules (86.9% match)",
-      type: 'found' as const,
-      delay: 6500,
-      details: 'Wake turbulence criteria for departures'
-    },
-    {
-      message: "🎯 15 high-relevance procedures identified",
-      type: 'processing' as const,
-      delay: 8000,
-      details: 'All results above 84% similarity'
-    },
-    {
-      message: "📋 Compiling comprehensive response...",
-      type: 'processing' as const,
-      delay: 9500,
-      details: 'Including separation minima and advisories'
-    },
-    {
-      message: "✅ Knowledge base analysis complete",
-      type: 'complete' as const,
-      delay: 11000,
-      details: '67% more efficient than previous search'
+  // Generate dynamic search steps based on actual query
+  const searchSteps = React.useMemo(() => {
+    const queryLower = searchQuery.toLowerCase();
+    const isWakeTurbulence = queryLower.includes('wake') || queryLower.includes('turbulence');
+    const isDeparture = queryLower.includes('departure') || queryLower.includes('takeoff');
+    const isSeparation = queryLower.includes('separation') || queryLower.includes('minima');
+    const isApproach = queryLower.includes('approach') || queryLower.includes('landing');
+    const isRunway = queryLower.includes('runway');
+
+    let topicType = 'general procedures';
+    let exampleChapter = 'Chapter 3, Section 1';
+    let exampleDetails = 'General ATC procedures';
+
+    if (isWakeTurbulence) {
+      topicType = 'wake turbulence procedures';
+      exampleChapter = 'Chapter 5, Section 5';
+      exampleDetails = 'Wake turbulence separation minima';
+    } else if (isDeparture) {
+      topicType = 'departure procedures';
+      exampleChapter = 'Chapter 3, Section 9';
+      exampleDetails = 'Departure control instructions';
+    } else if (isSeparation) {
+      topicType = 'separation requirements';
+      exampleChapter = 'Chapter 5, Section 5';
+      exampleDetails = 'Traffic separation minima';
+    } else if (isApproach) {
+      topicType = 'approach procedures';
+      exampleChapter = 'Chapter 4, Section 3';
+      exampleDetails = 'Approach clearance requirements';
+    } else if (isRunway) {
+      topicType = 'runway operations';
+      exampleChapter = 'Chapter 3, Section 10';
+      exampleDetails = 'Runway usage procedures';
     }
-  ], [searchQuery]);
+
+    return [
+      {
+        message: `🔍 Searching for "${searchQuery.substring(0, 35)}${searchQuery.length > 35 ? '...' : ''}"`,
+        type: 'search' as const,
+        delay: 600,
+        details: 'Processing your question'
+      },
+      {
+        message: `📚 Analyzing ${topicType}`,
+        type: 'found' as const,
+        delay: 1200,
+        details: 'Scanning knowledge base'
+      },
+      {
+        message: `📖 Found relevant ${exampleChapter} content`,
+        type: 'found' as const,
+        delay: 1800,
+        details: exampleDetails
+      },
+      {
+        message: "🎯 Compiling response from procedures",
+        type: 'processing' as const,
+        delay: 2400,
+        details: 'Extracting relevant information'
+      },
+      {
+        message: "✅ Knowledge base search complete",
+        type: 'complete' as const,
+        delay: 3000,
+        details: 'Ready to provide answer'
+      }
+    ];
+  }, [searchQuery]);
 
   // Use ref to store onComplete to avoid effect re-runs
   const onCompleteRef = React.useRef(onComplete);
